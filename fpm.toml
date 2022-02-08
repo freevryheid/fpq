@@ -1,0 +1,13 @@
+name = "fpq"
+version = "0.1.0"
+license = "MIT"
+author = "Andre Smit"
+maintainer = "freevryheid@gmail.com"
+copyright = "Copyright 2022, Andre Smit"
+[build]
+link = "pq"
+auto-executables = true
+auto-tests = true
+auto-examples = true
+[install]
+library = false

@@ -1,2 +1,4 @@
 # fpq
-PostgreSQL (pq) fortran bindings 
+PostgreSQL (pq) fortran bindings
+
+Still under development!
