@@ -71,7 +71,7 @@ module fpq_connect
     !! for a successful connection before queries are sent via the connection object.
 
     function connectdb(conninfo) result(conn)
-      !! Makes a new connection to the database server.
+      !! ## Makes a new connection to the database server.
       !! This function opens a new database connection using the parameters taken from the string conninfo.
       !! The passed string can be empty to use all default parameters, or it can contain one or more
       !! parameter settings separated by whitespace, or it can contain a URI.
@@ -83,7 +83,7 @@ module fpq_connect
     end function connectdb
 
     subroutine finish(conn)
-      !! Closes the connection to the server. Also frees memory used by the conn object.
+      !! ## Closes the connection to the server. Also frees memory used by the conn object.
       !! Note that even if the server connection attempt fails (as indicated by status),
       !! the application should call finish to free the memory used by the conn object.
       !! The conn pointer must not be used again after finish has been called.
@@ -93,7 +93,7 @@ module fpq_connect
     end subroutine finish
 
     subroutine reset(conn)
-      !! Resets the communication channel to the server.
+      !! ## Resets the communication channel to the server.
       !! This function will close the connection to the server and attempt to establish a new connection,
       !! using all the same parameters previously used.
       !! This might be useful for error recovery if a working connection is lost.

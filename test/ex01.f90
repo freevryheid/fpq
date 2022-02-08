@@ -5,8 +5,15 @@ program ex01
   character(len=*), parameter :: CONNINFO = 'host=localhost port=5432 dbname=smgr connect_timeout=10'
   type(c_ptr) :: conn
   conn = connectdb(CONNINFO)
-  print *, "Database name: " // db(conn)
-  print *, "Database user: " // user(conn)
+  print *, "db: " // db(conn)
+  print *, "user: " // user(conn)
+  print *, "pass: " // pass(conn)
+  print *, "host: " // host(conn)
+  print *, "hostaddr: " // hostaddr(conn)
+  print *, "port: " // port(conn)
+  print '(a, i6)', "status: ", status(conn)
+  print '(a, i6)', "serverversion: ", serverversion(conn)
+  print *, "errormessage: " // errormessage(conn)
   call finish(conn)
   call exit(0)
 end program ex01

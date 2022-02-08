@@ -17,6 +17,8 @@ module fpq_common
 
   contains
 
+    !! # Common procedures used by fpq modules.
+
     pure function copy(a)
       character, intent(in)  :: a(:)
       character(len=size(a)) :: copy
@@ -27,7 +29,7 @@ module fpq_common
     end function copy
 
     subroutine c_f_str_ptr(c_str, f_str)
-      !! Extract fortran string from a C pointer.
+      !! ## Extract fortran string from a C pointer.
       type(c_ptr), intent(in) :: c_str
       character(len=:), allocatable, intent(out) :: f_str
       character(kind=c_char), pointer :: ptrs(:)
@@ -41,7 +43,7 @@ module fpq_common
     end subroutine c_f_str_ptr
 
     function cstr(str) result(r)
-      !! Returns a NULL terminated string.
+      !! ## Returns a NULL terminated string.
       character(len=*), intent(in) :: str
         !! String.
       character(len=:), allocatable :: r
