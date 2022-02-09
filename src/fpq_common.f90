@@ -2,6 +2,7 @@ module fpq_common
   use, intrinsic :: iso_c_binding
   implicit none
   private
+
   public :: cstr, c_f_str_ptr
 
   interface

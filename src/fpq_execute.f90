@@ -25,7 +25,7 @@ module fpq_execute
   integer, parameter, public :: PGRES_SINGLE_TUPLE = 9
     !! The PGresult contains a single result tuple from the current command. This status occurs only when single-row mode has been selected for the query (see Section 34.6).
 
-  public :: exec, resultstatus, resstatus, resulterrormessage, resulterrorfield, clear, ntuples, nfields, fname, fnumber
+  public :: exec, resultstatus, resstatus, resulterrormessage, resulterrorfield, clear, ntuples, nfields, fname, fnumber, ftablecol
 
   interface
 
@@ -154,9 +154,14 @@ module fpq_execute
     !              int column_number);
     ! STILL TO DO
 
-    ! int PQftablecol(const PGresult *res,
-    !                 int column_number);
-    ! STILL TO DO
+    ! int PQftablecol(const PGresult *res, int column_number);
+    function pqftablecol(pgresult, column_number) bind(c, name='PQftablecol') result(r)
+      import :: c_ptr, c_int
+      implicit none
+      type(c_ptr), intent(in), value :: pgresult
+      integer(kind=c_int), intent(in) :: column_number
+      integer(kind=c_int) :: r
+    end function pqftablecol
 
     ! int PQfformat(const PGresult *res,
     !               int column_number);
@@ -394,6 +399,17 @@ module fpq_execute
         !! -1 is returned if the given name does not match any column.
       r = pqfnumber(pgresult, cstr(column_name))
     end function fnumber
+
+    function ftablecol(pgresult, column_number) result(r)
+      !! Returns the column number (within its table) of the column making up the specified query result column.
+      type(c_ptr), intent(in), value :: pgresult
+        !! PGresult pointer.
+      integer(kind=c_int), intent(in) :: column_number
+        !! Query-result column numbers start at 0, but table columns have nonzero numbers.
+      integer(kind=c_int) :: r
+        !! Zero is returned if the column number is out of range, or if the specified column is not a simple reference to a table column.
+      r = pqftablecol(pgresult, column_number)
+    end function ftablecol
 
 
 
