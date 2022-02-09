@@ -55,6 +55,12 @@ module fpq_status
       type(c_ptr) :: r
     end function pqport
 
+    ! char *PQtty(const PGconn *conn);
+    ! STILL TO DO
+
+    ! char *PQoptions(const PGconn *conn);
+    ! STILL TO DO
+
     ! ConnStatusType PQstatus(const PGconn *conn);
     function pqstatus(conn) bind(c, name='PQstatus') result(r)
       import :: c_ptr, c_int
@@ -62,6 +68,15 @@ module fpq_status
       type(c_ptr), intent(in), value :: conn
       integer(kind=c_int) :: r
     end function pqstatus
+
+    ! PGTransactionStatusType PQtransactionStatus(const PGconn *conn);
+    ! STILL TO DO
+
+    ! const char *PQparameterStatus(const PGconn *conn, const char *paramName);
+    ! STILL TO DO
+
+    ! int PQprotocolVersion(const PGconn *conn);
+    ! STILL TO DO
 
     ! int PQserverVersion(const PGconn *conn);
     function pqserverversion(conn) bind(c, name='PQserverVersion') result(r)
@@ -79,7 +94,32 @@ module fpq_status
       type(c_ptr) :: r
     end function pqerrormessage
 
+    ! int PQsocket(const PGconn *conn);
+    ! STILL TO DO
 
+    ! int PQbackendPID(const PGconn *conn);
+    ! STILL TO DO
+
+    ! int PQconnectionNeedsPassword(const PGconn *conn);
+    ! STILL TO DO
+
+    ! int PQconnectionUsedPassword(const PGconn *conn);
+    ! STILL TO DO
+
+    ! int PQsslInUse(const PGconn *conn);
+    ! STILL TO DO
+
+    ! const char *PQsslAttribute(const PGconn *conn, const char *attribute_name);
+    ! STILL TO DOy
+
+    ! const char * const * PQsslAttributeNames(const PGconn *conn);
+    ! STILL TO DO
+
+    ! void *PQsslStruct(const PGconn *conn, const char *struct_name);
+    ! STILL TO DO
+
+    ! void *PQgetssl(const PGconn *conn);
+    ! STILL TO DO
 
   end interface
 

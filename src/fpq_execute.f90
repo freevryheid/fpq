@@ -38,6 +38,39 @@ module fpq_execute
       type(c_ptr) :: pgresult
     end function pqexec
 
+    ! PGresult *PQexecParams(PGconn *conn,
+    !                        const char *command,
+    !                        int nParams,
+    !                        const Oid *paramTypes,
+    !                        const char * const *paramValues,
+    !                        const int *paramLengths,
+    !                        const int *paramFormats,
+    !                        int resultFormat);
+    ! STILL TO DO
+
+    ! PGresult *PQprepare(PGconn *conn,
+    !                  const char *stmtName,
+    !                  const char *query,
+    !                  int nParams,
+    !                  const Oid *paramTypes);
+    ! STILL TO DO
+
+    ! PGresult *PQexecPrepared(PGconn *conn,
+    !                          const char *stmtName,
+    !                          int nParams,
+    !                          const char * const *paramValues,
+    !                          const int *paramLengths,
+    !                          const int *paramFormats,
+    !                          int resultFormat);
+    ! STILL TO DO
+
+    ! PGresult *PQdescribePrepared(PGconn *conn, const char *stmtName);
+    ! STILL TO DO
+
+
+    ! PGresult *PQdescribePortal(PGconn *conn, const char *portalName);
+    ! STILL TO DO
+
     ! ExecStatusType PQresultStatus(const PGresult *res);
     function pqresultstatus(pgresult) bind(c, name='PQresultStatus') result(r)
       import :: c_ptr, c_int
@@ -61,6 +94,11 @@ module fpq_execute
       type(c_ptr), intent(in), value :: pgresult
       type(c_ptr) :: r
     end function pqresulterrormessage
+
+    ! char *PQresultVerboseErrorMessage(const PGresult *res,
+    !                                   PGVerbosity verbosity,
+    !                                   PGContextVisibility show_context);
+    ! STILL TO DO
 
     ! char *PQresultErrorField(const PGresult *res, int fieldcode);
     function pqresulterrorfield(pgresult, fieldcode) bind(c, name='PQresultErrorField') result(r)
@@ -112,10 +150,111 @@ module fpq_execute
       integer(kind=c_int) :: r
     end function pqfnumber
 
+    ! Oid PQftable(const PGresult *res,
+    !              int column_number);
+    ! STILL TO DO
 
+    ! int PQftablecol(const PGresult *res,
+    !                 int column_number);
+    ! STILL TO DO
 
+    ! int PQfformat(const PGresult *res,
+    !               int column_number);
+    ! STILL TO DO
 
+    ! Oid PQftype(const PGresult *res,
+    !         int column_number);
+    ! STILL TO DO
 
+    ! int PQfmod(const PGresult *res,
+    !            int column_number);
+    ! STILL TO DO
+
+    ! int PQfsize(const PGresult *res,
+    !             int column_number);
+    ! STILL TO DO
+
+    ! int PQbinaryTuples(const PGresult *res);
+    ! STILL TO DO
+
+    ! char *PQgetvalue(const PGresult *res,
+    !                  int row_number,
+    !                  int column_number);
+    ! STILL TO DO
+
+    ! int PQgetisnull(const PGresult *res,
+    !                 int row_number,
+    !                 int column_number);
+    ! STILL TO DO
+
+    ! int PQgetlength(const PGresult *res,
+    !                 int row_number,
+    !                 int column_number);
+    ! STILL TO DO
+
+    ! int PQnparams(const PGresult *res);
+    ! STILL TO DO
+
+    ! Oid PQparamtype(const PGresult *res, int param_number);
+    ! STILL TO DO
+
+    ! void PQprint(FILE *fout,      /* output stream */
+    !              const PGresult *res,
+    !              const PQprintOpt *po);
+    ! typedef struct
+    ! {
+    !     pqbool  header;      /* print output field headings and row count */
+    !     pqbool  align;       /* fill align the fields */
+    !     pqbool  standard;    /* old brain dead format */
+    !     pqbool  html3;       /* output HTML tables */
+    !     pqbool  expanded;    /* expand tables */
+    !     pqbool  pager;       /* use pager for output if needed */
+    !     char    *fieldSep;   /* field separator */
+    !     char    *tableOpt;   /* attributes for HTML table element */
+    !     char    *caption;    /* HTML table caption */
+    !     char    **fieldName; /* null-terminated array of replacement field names */
+    ! } PQprintOpt;
+    ! STILL TO DO
+
+    ! char *PQcmdStatus(PGresult *res);
+    ! STILL TO DO
+
+    ! char *PQcmdTuples(PGresult *res);
+    ! STILL TO DO
+
+    ! Oid PQoidValue(const PGresult *res);
+    ! STILL TO DO
+
+    ! char *PQoidStatus(const PGresult *res);
+    ! STILL TO DO
+
+    ! char *PQescapeLiteral(PGconn *conn, const char *str, size_t length);
+    ! STILL TO DO
+
+    ! char *PQescapeIdentifier(PGconn *conn, const char *str, size_t length);
+    ! STILL TO DO
+
+    ! size_t PQescapeStringConn(PGconn *conn,
+    !                           char *to, const char *from, size_t length,
+    !                           int *error);
+    ! STILL TO DO
+
+    ! size_t PQescapeString (char *to, const char *from, size_t length);
+    ! STILL TO DO
+
+    ! unsigned char *PQescapeByteaConn(PGconn *conn,
+    !                              const unsigned char *from,
+    !                              size_t from_length,
+    !                              size_t *to_length);
+    ! STILL TO DO
+
+    ! unsigned char *PQescapeBytea(const unsigned char *from,
+    !                           size_t from_length,
+    !                           size_t *to_length);
+    ! STILL TO DO
+
+    ! unsigned char *PQunescapeBytea(const unsigned char *from, size_t *to_length);
+    ! STILL TO DO
 
   end interface
 

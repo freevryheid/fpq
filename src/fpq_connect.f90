@@ -34,6 +34,9 @@ module fpq_connect
 
   interface
 
+    ! PGconn *PQconnectdbParams(const char * const *keywords, const char * const *values, int expand_dbname);
+    ! STILL TO DO
+
     ! PGconn *PQconnectdb(const char *conninfo);
     function pqconnectdb(conninfo) bind(c, name='PQconnectdb') result(pgconn)
       import :: c_char, c_ptr
@@ -41,6 +44,59 @@ module fpq_connect
       character(kind=c_char), intent(in) :: conninfo
       type(c_ptr) :: pgconn
     end function pqconnectdb
+
+    ! PGconn *PQsetdbLogin(const char *pghost,
+    !                      const char *pgport,
+    !                      const char *pgoptions,
+    !                      const char *pgtty,
+    !                      const char *dbName,
+    !                      const char *login,
+    !                      const char *pwd);
+    ! STILL TO DO
+
+    ! PGconn *PQsetdb(char *pghost,
+    !                 char *pgport,
+    !                 char *pgoptions,
+    !                 char *pgtty,
+    !                 char *dbName);
+    ! STILL TO DO
+
+    ! PGconn *PQconnectStartParams(const char * const *keywords,
+    !                              const char * const *values,
+    !                              int expand_dbname);
+    ! STILL TO DO
+
+    ! PGconn *PQconnectStart(const char *conninfo);
+    ! STILL TO DO
+
+    ! PostgresPollingStatusType PQconnectPoll(PGconn *conn);
+    ! STILL TO DO
+
+
+    ! PQconninfoOption *PQconndefaults(void);
+    !
+    ! typedef struct
+    ! {
+    !     char   *keyword;   /* The keyword of the option */
+    !     char   *envvar;    /* Fallback environment variable name */
+    !     char   *compiled;  /* Fallback compiled in default value */
+    !     char   *val;       /* Option's current value, or NULL */
+    !     char   *label;     /* Label for field in connect dialog */
+    !     char   *dispchar;  /* Indicates how to display this field
+    !                           in a connect dialog. Values are:
+    !                           ""        Display entered value as is
+    !                           "*"       Password field - hide value
+    !                           "D"       Debug option - don't show by default */
+    !     int     dispsize;  /* Field size in characters for dialog */
+    ! } PQconninfoOption;
+    ! STILL TO DO
+
+    ! PQconninfoOption *PQconninfo(PGconn *conn);
+    ! STILL TO DO
+
+
+    ! PQconninfoOption *PQconninfoParse(const char *conninfo, char **errmsg);
+    ! STILL TO DO
 
     ! void PQfinish(PGconn *conn);
     subroutine pqfinish(conn) bind(c, name='PQfinish')
@@ -55,6 +111,26 @@ module fpq_connect
       implicit none
       type(c_ptr), intent(in), value :: conn
     end subroutine pqreset
+
+    ! int PQresetStart(PGconn *conn);
+    ! STILL TO DO
+
+    ! PostgresPollingStatusType PQresetPoll(PGconn *conn);
+    ! STILL TO DO
+
+    ! PGPing PQpingParams(const char * const *keywords,
+    !                     const char * const *values,
+    !                     int expand_dbname);
+    ! STILL TO DOi
+
+    ! PGPing PQping(const char *conninfo);
+    ! STILL TO DO
+
+    ! void PQsetSSLKeyPassHook_OpenSSL(PQsslKeyPassHook_OpenSSL_type hook);
+    ! STILL TO DO
+
+    ! PQsslKeyPassHook_OpenSSL_type PQgetSSLKeyPassHook_OpenSSL(void);
+    ! STILL TO DO
 
   end interface
 
