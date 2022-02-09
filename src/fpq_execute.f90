@@ -104,6 +104,14 @@ module fpq_execute
     end function pqfname
 
     ! int PQfnumber(const PGresult *res, const char *column_name);
+    function pqfnumber(pgresult, column_name) bind(c, name='PQfnumber') result(r)
+      import :: c_ptr, c_char, c_int
+      implicit none
+      type(c_ptr), intent(in) :: pgresult
+      character(kind=c_char), intent(in) :: column_name
+      integer(kind=c_int) :: r
+    end function pqfnumber
+
 
 
 
@@ -236,6 +244,17 @@ module fpq_execute
         call c_f_str_ptr(ptr, r)
       end if
     end function fname
+
+    function fnumber(pgresult, column_name) result(r)
+      !! Returns the column number associated with the given column name.
+      type(c_ptr), intent(in) :: pgresult
+        !! PGresult pointer.
+      character(len=*), intent(in) :: column_name
+        !! The given name is treated like an identifier in an SQL command, that is, it is downcased unless double-quoted.
+      integer(kind=c_int) :: r
+        !! -1 is returned if the given name does not match any column.
+      r = pqfnumber(pgresult, cstr(column_name))
+    end function fnumber
 
 
 
