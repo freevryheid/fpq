@@ -6,8 +6,7 @@ maintainer = "freevryheid@gmail.com"
 copyright = "Copyright 2022, Andre Smit"
 [build]
 link = "pq"
-auto-executables = true
-auto-tests = true
-auto-examples = true
+[dev-dependencies]
+test-drive.git = "https://github.com/fortran-lang/test-drive"
 [install]
-library = false
+library = true
