@@ -25,7 +25,9 @@ module fpq_execute
   integer, parameter, public :: PGRES_SINGLE_TUPLE = 9
     !! The PGresult contains a single result tuple from the current command. This status occurs only when single-row mode has been selected for the query (see Section 34.6).
 
-  public :: exec, resultstatus, resstatus, resulterrormessage, resulterrorfield, clear, ntuples, nfields, fname, fnumber, ftablecol
+  public :: exec, resultstatus, resstatus, resulterrormessage, resulterrorfield, clear
+  public :: ntuples, nfields, fname, fnumber, ftablecol, fformat, fmod, fsize, binarytuples
+  public :: nparams, describeprepared
 
   interface
 
@@ -65,8 +67,13 @@ module fpq_execute
     ! STILL TO DO
 
     ! PGresult *PQdescribePrepared(PGconn *conn, const char *stmtName);
-    ! STILL TO DO
-
+    function pqdescribeprepared(conn, stmtname) bind(c, name='PQdescribePrepared') result(pgresult)
+      import :: c_ptr, c_char
+      implicit none
+      type(c_ptr), intent(in) :: conn
+      character(kind=c_char), intent(in) :: stmtname
+      type(c_ptr) :: pgresult
+    end function PQdescribePrepared
 
     ! PGresult *PQdescribePortal(PGconn *conn, const char *portalName);
     ! STILL TO DO
@@ -163,24 +170,44 @@ module fpq_execute
       integer(kind=c_int) :: r
     end function pqftablecol
 
-    ! int PQfformat(const PGresult *res,
-    !               int column_number);
-    ! STILL TO DO
+    ! int PQfformat(const PGresult *res, int column_number);
+    function pqfformat(pgresult, column_number) bind(c, name='PQfformat') result(r)
+      import :: c_ptr, c_int
+      implicit none
+      type(c_ptr), intent(in), value :: pgresult
+      integer(kind=c_int), intent(in) :: column_number
+      integer(kind=c_int) :: r
+    end function pqfformat
 
     ! Oid PQftype(const PGresult *res,
     !         int column_number);
     ! STILL TO DO
 
-    ! int PQfmod(const PGresult *res,
-    !            int column_number);
-    ! STILL TO DO
+    ! int PQfmod(const PGresult *res, int column_number);
+    function pqfmod(pgresult, column_number) bind(c, name='PQfmod') result(r)
+      import :: c_ptr, c_int
+      implicit none
+      type(c_ptr), intent(in), value :: pgresult
+      integer(kind=c_int), intent(in) :: column_number
+      integer(kind=c_int) :: r
+    end function pqfmod
 
-    ! int PQfsize(const PGresult *res,
-    !             int column_number);
-    ! STILL TO DO
+    ! int PQfsize(const PGresult *res, int column_number);
+    function pqfsize(pgresult, column_number) bind(c, name='PQfsize') result(r)
+      import :: c_ptr, c_int
+      implicit none
+      type(c_ptr), intent(in), value :: pgresult
+      integer(kind=c_int), intent(in) :: column_number
+      integer(kind=c_int) :: r
+    end function pqfsize
 
     ! int PQbinaryTuples(const PGresult *res);
-    ! STILL TO DO
+    function PQbinarytuples(pgresult) bind(c, name='PQbinaryTuples') result(r)
+      import :: c_ptr, c_int
+      implicit none
+      type(c_ptr), intent(in), value :: pgresult
+      integer(kind=c_int) :: r
+    end function PQbinarytuples
 
     ! char *PQgetvalue(const PGresult *res,
     !                  int row_number,
@@ -198,7 +225,12 @@ module fpq_execute
     ! STILL TO DO
 
     ! int PQnparams(const PGresult *res);
-    ! STILL TO DO
+    function PQnparams(pgresult) bind(c, name='PQnparams') result(r)
+      import :: c_ptr, c_int
+      implicit none
+      type(c_ptr), intent(in), value :: pgresult
+      integer(kind=c_int) :: r
+    end function PQnparams
 
     ! Oid PQparamtype(const PGresult *res, int param_number);
     ! STILL TO DO
@@ -275,12 +307,29 @@ module fpq_execute
         !! unless there are explicit BEGIN/COMMIT commands included in the query string to divide
         !! it into multiple transactions. (See Section 53.2.2.1 for more details about how the
         !! server handles multi-query strings.)
+      type(c_ptr) :: r
         !! Note however that the returned PGresult structure describes only the result of the last
         !! command executed from the string. Should one of the commands fail, processing of the
         !! string stops with it and the returned PGresult describes the error condition.
-      type(c_ptr) :: r
       r = pqexec(conn, cstr(command))
     end function exec
+
+    function describeprepared(conn, stmtname) result(r)
+      !! Submits a request to obtain information about the specified prepared statement,
+      !! and waits for completion.
+      type(c_ptr), intent(in) :: conn
+        !! Database connection pointer.
+      character(len=*), intent(in) :: stmtname
+        !! stmtName can be "" or NULL to reference the unnamed statement,
+        !! otherwise it must be the name of an existing prepared statement.
+      type(c_ptr) :: r
+        !! On success, a PGresult with status PGRES_COMMAND_OK is returned.
+        !! The functions PQnparams and PQparamtype can be applied to this PGresult
+        !! to obtain information about the parameters of the prepared statement,
+        !! and the functions PQnfields, PQfname, PQftype, etc provide information
+        !! about the result columns (if any) of the statement.
+      r = pqdescribeprepared(conn, cstr(stmtname))
+    end function describeprepared
 
     function resultstatus(pgresult) result(r)
       !! Returns the result status of the command.
@@ -411,8 +460,65 @@ module fpq_execute
       r = pqftablecol(pgresult, column_number)
     end function ftablecol
 
+    function fformat(pgresult, column_number) result(r)
+      !! Returns the format code indicating the format of the given column.
+      type(c_ptr), intent(in), value :: pgresult
+        !! PGresult pointer.
+      integer(kind=c_int), intent(in) :: column_number
+        !! Query-result column numbers start at 0, but table columns have nonzero numbers.
+      integer(kind=c_int) :: r
+        !! Format code zero indicates textual data representation, while format code one indicates binary representation.
+      r = pqfformat(pgresult, column_number)
+    end function fformat
 
+    function fmod(pgresult, column_number) result(r)
+      !! Returns the type modifier of the column associated with the given column number.
+      type(c_ptr), intent(in), value :: pgresult
+        !! PGresult pointer.
+      integer(kind=c_int), intent(in) :: column_number
+        !! Query-result column numbers start at 0, but table columns have nonzero numbers.
+      integer(kind=c_int) :: r
+        !! The interpretation of modifier values is type-specific; they typically indicate precision or size limits.
+        !! The value -1 is used to indicate no information available.
+        !! Most data types do not use modifiers, in which case the value is always -1.
+      r = pqfmod(pgresult, column_number)
+    end function fmod
 
+    function fsize(pgresult, column_number) result(r)
+      !! Returns the size in bytes of the column associated with the given column number.
+      type(c_ptr), intent(in), value :: pgresult
+        !! PGresult pointer.
+      integer(kind=c_int), intent(in) :: column_number
+        !! Query-result column numbers start at 0, but table columns have nonzero numbers.
+      integer(kind=c_int) :: r
+        !! Returns the space allocated for this column in a database row, in other words
+        !! the size of the server's internal representation of the data type.
+        !! (Accordingly, it is not really very useful to clients.)
+        !! A negative value indicates the data type is variable-length.
+      r = pqfsize(pgresult, column_number)
+    end function fsize
+
+    function binarytuples(pgresult) result(r)
+      !! Returns 1 if the PGresult contains binary data and 0 if it contains text data.
+      type(c_ptr), intent(in), value :: pgresult
+        !! PGresult pointer.
+      integer(kind=c_int) :: r
+        !! This function is deprecated (except for its use in connection with COPY),
+        !! because it is possible for a single PGresult to contain text data in some columns
+        !! and binary data in others. PQfformat is preferred.
+        !! PQbinaryTuples returns 1 only if all columns of the result are binary (format 1).
+      r = pqbinarytuples(pgresult)
+    end function binarytuples
+
+    function nparams(pgresult) result(r)
+      !! Returns the number of parameters of a prepared statement.
+      type(c_ptr), intent(in), value :: pgresult
+        !! PGresult pointer.
+      integer(kind=c_int) :: r
+        !! This function is only useful when inspecting the result of PQdescribePrepared.
+        !! For other types of queries it will return zero.
+      r = pqnparams(pgresult)
+    end function nparams
 
 
 end module fpq_execute

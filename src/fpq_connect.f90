@@ -151,6 +151,20 @@ module fpq_connect
     !! the conn object. The status function should be called to check the return value
     !! for a successful connection before queries are sent via the connection object.
 
+    ! connectdbParams(const char * const *keywords, const char * const *values, int expand_dbname);
+    ! STILL TO DO
+
+    !! Makes a new connection to the database server.
+
+    !! This function opens a new database connection using the parameters taken from two NULL-terminated arrays. The first, keywords, is defined as an array of strings, each one being a key word. The second, values, gives the value for each key word. Unlike PQsetdbLogin below, the parameter set can be extended without changing the function signature, so use of this function (or its nonblocking analogs PQconnectStartParams and PQconnectPoll) is preferred for new application programming.
+    !! The currently recognized parameter key words are listed in Section 34.1.2.
+    !! The passed arrays can be empty to use all default parameters, or can contain one or more parameter settings. They must be matched in length. Processing will stop at the first NULL entry in the keywords array. Also, if the values entry associated with a non-NULL keywords entry is NULL or an empty string, that entry is ignored and processing continues with the next pair of array entries.
+    !! When expand_dbname is non-zero, the value for the first dbname key word is checked to see if it is a connection string. If so, it is expanded into the individual connection parameters extracted from the string. The value is considered to be a connection string, rather than just a database name, if it contains an equal sign (=) or it begins with a URI scheme designator. (More details on connection string formats appear in Section 34.1.1.) Only the first occurrence of dbname is treated in this way; any subsequent dbname parameter is processed as a plain database name.
+    !! In general the parameter arrays are processed from start to end. If any key word is repeated, the last value (that is not NULL or empty) is used. This rule applies in particular when a key word found in a connection string conflicts with one appearing in the keywords array. Thus, the programmer may determine whether array entries can override or be overridden by values taken from a connection string. Array entries appearing before an expanded dbname entry can be overridden by fields of the connection string, and in turn those fields are overridden by array entries appearing after dbname (but, again, only if those entries supply non-empty values).
+    !! After processing all the array entries and any expanded connection string, any connection parameters that remain unset are filled with default values. If an unset parameter's corresponding environment variable (see Section 34.15) is set, its value is used. If the environment variable is not set either, then the parameter's built-in default value is used.
+
+
+
     function connectdb(conninfo) result(conn)
       !! ## Makes a new connection to the database server.
       !! This function opens a new database connection using the parameters taken from the string conninfo.
@@ -162,6 +176,26 @@ module fpq_connect
         !! Database connection pointer.
       conn = pqconnectdb(cstr(conninfo))
     end function connectdb
+
+
+    ! PGconn *PQsetdbLogin(const char *pghost,
+    !                      const char *pgport,
+    !                      const char *pgoptions,
+    !                      const char *pgtty,
+    !                      const char *dbName,
+    !                      const char *login,
+    !                      const char *pwd);
+    ! STILL TO DO
+
+    !! Makes a new connection to the database server.
+
+    !! This is the predecessor of PQconnectdb with a fixed set of parameters. It has the same functionality except that the missing parameters will always take on default values. Write NULL or an empty string for any one of the fixed parameters that is to be defaulted.
+    !! If the dbName contains an = sign or has a valid connection URI prefix, it is taken as a conninfo string in exactly the same way as if it had been passed to PQconnectdb, and the remaining parameters are then applied as specified for PQconnectdbParams.
+    !! pgtty is no longer used and any value passed will be ignored.
+
+
+
+
 
     subroutine finish(conn)
       !! ## Closes the connection to the server. Also frees memory used by the conn object.
