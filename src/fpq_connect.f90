@@ -4,6 +4,9 @@ module fpq_connect
   implicit none
   private
 
+  ! TODO
+  ! keywords.dim[0].ubound may be used uninitialized
+
   ! Connection parameters
   integer, parameter, public :: CONNECTION_OK = 0
     !! Connection success. The existence of these should never be relied upon.
@@ -46,6 +49,8 @@ module fpq_connect
 
   public :: connectdbparams
   public :: connectdb
+  public :: setdblogin
+  public :: setdb
   public :: finish
   public :: reset
 
@@ -75,19 +80,23 @@ module fpq_connect
     !                      const char *dbName,
     !                      const char *login,
     !                      const char *pwd);
-    ! STILL TO DO
-
-    ! PGconn *PQsetdb(char *pghost,
-    !                 char *pgport,
-    !                 char *pgoptions,
-    !                 char *pgtty,
-    !                 char *dbName);
-    ! STILL TO DO
+    function pqsetdblogin(pghost, pgport, pgoptions, pgtty, dbname, login, pwd) bind(c, name='PQsetdbLogin') result(pgconn)
+      import :: c_char, c_ptr
+      implicit none
+      character(kind=c_char), intent(in) :: pghost, pgport, pgoptions, pgtty, dbname, login, pwd
+      type(c_ptr) :: pgconn
+    end function pqsetdblogin
 
     ! PGconn *PQconnectStartParams(const char * const *keywords,
     !                              const char * const *values,
     !                              int expand_dbname);
-    ! STILL TO DO
+    function pqconnectstartparams(keywords, values, expand_dbname) bind(c, name='PQconnectStartParams') result(pgconn)
+      import :: c_ptr, c_int
+      implicit none
+      type(c_ptr), intent(in) :: keywords, values
+      integer(kind=c_int), intent(in) :: expand_dbname
+      type(c_ptr) :: pgconn
+    end function pqconnectstartparams
 
     ! PGconn *PQconnectStart(const char *conninfo);
     ! STILL TO DO
@@ -171,17 +180,19 @@ module fpq_connect
     !! should be called to check the return value for a successful connection
     !! before queries are sent via the connection object.
 
-    ! connectdbParams(const char * const *keywords, const char * const *values, int expand_dbname);
     function connectdbparams(keywords, values, expand_dbname) result(pgconn)
+      !! @Bug FIXME - this uses 2 string arrays - imlementation appears buggy.
+      !! Use [[dbconnect]] instead.
+      !!
       !! Makes a new connection to the database server.
       !! This function opens a new database connection using the parameters
       !! taken from two string arrays.
       character(len=:), allocatable, intent(in) :: keywords(:)
-        !! An array of strings, each one being a keyword. Unlike setdbLogin [todo]  below,
-        !! the parameter set can be extended without changing the function
-        !! signature, so use of this function (or its nonblocking analogs
-        !! connectstartparams and connectpoll) is preferred for new
-        !! application programming.
+        !! An array of strings, each one being a keyword. Unlike [[setdbLogin]]
+        !! below, the parameter set can be extended without changing the
+        !! function signature, so use of this function (or its nonblocking
+        !! analogs [[connectstartparams]] and [[connectpoll]]) is preferred for
+        !! new application programming.
         !! The currently recognized parameter keywords are listed
         !! [here](https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-PARAMKEYWORDS).
       character(len=:), allocatable, intent(in) :: values(:)
@@ -192,12 +203,29 @@ module fpq_connect
         !! array. Also, if the values entry associated with a non-NULL keywords
         !! entry is NULL or an empty string, that entry is ignored and
         !! processing continues with the next pair of array entries.
-      character, target :: keywords_strs(50) ! There are currently 38 possible keywords
+        !! In general the parameter arrays are processed from start to end.
+        !! If any keyword is repeated, the last value (that is not NULL or
+        !! empty) is used. This rule applies in particular when a keyword
+        !! found in a connection string conflicts with one appearing in the
+        !! keywords array. Thus, the programmer may determine whether array
+        !! entries can override or be overridden by values taken from a
+        !! connection string. Array entries appearing before an expanded
+        !! *dbname* entry can be overridden by fields of the connection
+        !! string, and in turn those fields are overridden by array entries
+        !! appearing after *dbname* (but, again, only if those entries supply
+        !! non-empty values). After processing all the array entries and any
+        !! expanded connection string, any connection parameters that remain
+        !! unset are filled with default values. If an unset parameter's
+        !! corresponding [environment variable]
+        !! (https://www.postgresql.org/docs/current/libpq-envars.html)
+        !! is set, its value is used. If the environment variable is not set
+        !! either, then the parameter's built-in default value is used.
+      character, target :: keywords_strs(50)  ! There are currently 38 possible keywords
       character, target :: values_strs(50)
       type(c_ptr), allocatable :: keywords_ptrs(:)
       type(c_ptr), allocatable :: values_ptrs(:)
       integer, intent(in) :: expand_dbname
-        !! When expand_dbname is non-zero, the value for the first dbname
+        !! When *expand_dbname* is non-zero, the value for the first dbname
         !! keyword is checked to see if it is a connection string. If so, it is
         !! expanded into the individual connection parameters extracted from
         !! the string. The value is considered to be a connection string,
@@ -205,14 +233,12 @@ module fpq_connect
         !! or it begins with a URI scheme designator. (More details on
         !! connection string formats appear
         !! [here](https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING).
-        !! Only the first occurrence of dbname is treated in this way; any
-        !! subsequent dbname parameter is processed as a plain database name.
+        !! Only the first occurrence of *dbname* is treated in this way; any
+        !! subsequent *dbname* parameter is processed as a plain database name.
       type(c_ptr) :: pgconn
-      ! integer, pointer :: conn
         !! Database connection pointer.
       integer i, ksize, vsize
       pgconn = c_null_ptr
-      ! call c_f_pointer(pgconn, conn)
       if (allocated(keywords)) then
         ksize = size(keywords, 1)
       end if
@@ -231,56 +257,141 @@ module fpq_connect
       pgconn = pqconnectdbparams(keywords_ptrs, values_ptrs, int(expand_dbname, kind=c_int))
       deallocate(keywords_ptrs)
       deallocate(values_ptrs)
-      ! call c_f_pointer(pgconn, conn)
     end function connectdbparams
 
-
-
-    !! In general the parameter arrays are processed from start to end. If any key word is repeated, the last value (that is not NULL or empty) is used. This rule applies in particular when a key word found in a connection string conflicts with one appearing in the keywords array. Thus, the programmer may determine whether array entries can override or be overridden by values taken from a connection string. Array entries appearing before an expanded dbname entry can be overridden by fields of the connection string, and in turn those fields are overridden by array entries appearing after dbname (but, again, only if those entries supply non-empty values).
-    !! After processing all the array entries and any expanded connection string, any connection parameters that remain unset are filled with default values. If an unset parameter's corresponding environment variable (see Section 34.15) is set, its value is used. If the environment variable is not set either, then the parameter's built-in default value is used.
-
-
-
     function connectdb(conninfo) result(conn)
-      !! ## Makes a new connection to the database server.
-      !! This function opens a new database connection using the parameters taken from the string conninfo.
-      !! The passed string can be empty to use all default parameters, or it can contain one or more
+      !! Makes a new connection to the database server.
+      !! The prefered way to connect to a database server using these bindings.
+      !! This function opens a new database connection using the parameters
+      !! taken from the string *conninfo*. The passed string can be empty to
+      !! use all default parameters, or it can contain one or more
       !! parameter settings separated by whitespace, or it can contain a URI.
       character(len=*), intent(in) :: conninfo
-        !! See [connection strings](https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING) for further information.
+        !! See [connection strings]
+        !! (https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING)
+        !! for further information.
       type(c_ptr) :: conn
         !! Database connection pointer.
       conn = pqconnectdb(cstr(conninfo))
     end function connectdb
 
+    function setdblogin(pghost, pgport, pgoptions, pgtty, dbname, login, pwd) result(pgconn)
+      !! Makes a new connection to the database server.
+      !! This is the predecessor of [[connectdb]] with a fixed set of
+      !! parameters. It has the same functionality except that the missing
+      !! parameters will always take on default values.
+      !! Write NULL or an empty string for any one of the fixed parameters
+      !! that is to be defaulted. If the dbName contains an = sign or has a
+      !! valid connection URI prefix, it is taken as a *conninfo* string in
+      !! exactly the same way as if it had been passed to [[connectdb]], and
+      !! the remaining parameters are then applied as specified for
+      !! [[connectdbparams]].
+      !! *pgtty* is no longer used and any value passed will be ignored.
+      type(c_ptr) :: pgconn
+        !! Database connection pointer.
+      character(len=*), intent(in) :: pghost
+      character(len=*), intent(in) :: pgport
+      character(len=*), intent(in) :: pgoptions
+      character(len=*), intent(in) :: pgtty
+      character(len=*), intent(in) :: dbname
+      character(len=*), intent(in) :: login
+      character(len=*), intent(in) :: pwd
+      pgconn = pqsetdblogin(cstr(pghost), cstr(pgport), cstr(pgoptions), cstr(pgtty), cstr(dbname), cstr(login), cstr(pwd))
+    end function setdblogin
 
-    ! PGconn *PQsetdbLogin(const char *pghost,
-    !                      const char *pgport,
-    !                      const char *pgoptions,
-    !                      const char *pgtty,
-    !                      const char *dbName,
-    !                      const char *login,
-    !                      const char *pwd);
-    ! STILL TO DO
+    function setdb(pghost, pgport, pgoptions, pgtty, dbname) result(pgconn)
+      !! Makes a new connection to the database server.
+      !! This is a macro that calls [[setdblogin]] with null pointers for the
+      !! login and pwd parameters. It is provided for backward compatibility
+      !! with very old programs.
+      type(c_ptr) :: pgconn
+        !! Database connection pointer.
+      character(len=*), intent(in) :: pghost
+      character(len=*), intent(in) :: pgport
+      character(len=*), intent(in) :: pgoptions
+      character(len=*), intent(in) :: pgtty
+      character(len=*), intent(in) :: dbname
+      pgconn = pqsetdblogin(cstr(pghost), cstr(pgport), cstr(pgoptions), cstr(pgtty), cstr(dbname), cstr(""), cstr(""))
+    end function setdb
 
-    !! Makes a new connection to the database server.
+    function connectstartparams(keywords, values, expand_dbname) result(pgconn)
+      !! @Bug FIXME - this uses 2 string arrays - imlementation appears buggy.
+      !! Use [[connectstart]] instead.
+      !!
+      !! Makes a new connection to the database server in a non-blocking manner.
+      !! [HERE]
 
-    !! This is the predecessor of PQconnectdb with a fixed set of parameters. It has the same functionality except that the missing parameters will always take on default values. Write NULL or an empty string for any one of the fixed parameters that is to be defaulted.
-    !! If the dbName contains an = sign or has a valid connection URI prefix, it is taken as a conninfo string in exactly the same way as if it had been passed to PQconnectdb, and the remaining parameters are then applied as specified for PQconnectdbParams.
-    !! pgtty is no longer used and any value passed will be ignored.
-
-
-! PQsetdb
-! Makes a new connection to the database server.
-
-! PGconn *PQsetdb(char *pghost,
-!                 char *pgport,
-!                 char *pgoptions,
-!                 char *pgtty,
-!                 char *dbName);
-! This is a macro that calls PQsetdbLogin with null pointers for the login and pwd parameters. It is provided for backward compatibility with very old programs.
-
-
+      character(len=:), allocatable, intent(in) :: keywords(:)
+        !! An array of strings, each one being a keyword. Unlike [[setdbLogin]]
+        !! below, the parameter set can be extended without changing the
+        !! function signature, so use of this function (or its nonblocking
+        !! analogs [[connectstartparams]] and [[connectpoll]]) is preferred for
+        !! new application programming.
+        !! The currently recognized parameter keywords are listed
+        !! [here](https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-PARAMKEYWORDS).
+      character(len=:), allocatable, intent(in) :: values(:)
+        !! Array of corresponding values for each keyword.
+        !! The passed arrays can be empty to use all default parameters, or
+        !! can contain one or more parameter settings. They must be matched in
+        !! length. Processing will stop at the first NULL entry in the keywords
+        !! array. Also, if the values entry associated with a non-NULL keywords
+        !! entry is NULL or an empty string, that entry is ignored and
+        !! processing continues with the next pair of array entries.
+        !! In general the parameter arrays are processed from start to end.
+        !! If any keyword is repeated, the last value (that is not NULL or
+        !! empty) is used. This rule applies in particular when a keyword
+        !! found in a connection string conflicts with one appearing in the
+        !! keywords array. Thus, the programmer may determine whether array
+        !! entries can override or be overridden by values taken from a
+        !! connection string. Array entries appearing before an expanded
+        !! *dbname* entry can be overridden by fields of the connection
+        !! string, and in turn those fields are overridden by array entries
+        !! appearing after *dbname* (but, again, only if those entries supply
+        !! non-empty values). After processing all the array entries and any
+        !! expanded connection string, any connection parameters that remain
+        !! unset are filled with default values. If an unset parameter's
+        !! corresponding [environment variable]
+        !! (https://www.postgresql.org/docs/current/libpq-envars.html)
+        !! is set, its value is used. If the environment variable is not set
+        !! either, then the parameter's built-in default value is used.
+      character, target :: keywords_strs(50)  ! There are currently 38 possible keywords
+      character, target :: values_strs(50)
+      type(c_ptr), allocatable :: keywords_ptrs(:)
+      type(c_ptr), allocatable :: values_ptrs(:)
+      integer, intent(in) :: expand_dbname
+        !! When *expand_dbname* is non-zero, the value for the first dbname
+        !! keyword is checked to see if it is a connection string. If so, it is
+        !! expanded into the individual connection parameters extracted from
+        !! the string. The value is considered to be a connection string,
+        !! rather than just a database name, if it contains an equal sign (=)
+        !! or it begins with a URI scheme designator. (More details on
+        !! connection string formats appear
+        !! [here](https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING).
+        !! Only the first occurrence of *dbname* is treated in this way; any
+        !! subsequent *dbname* parameter is processed as a plain database name.
+      type(c_ptr) :: pgconn
+        !! Database connection pointer.
+      integer i, ksize, vsize
+      pgconn = c_null_ptr
+      if (allocated(keywords)) then
+        ksize = size(keywords, 1)
+      end if
+      if (allocated(values)) then
+        vsize = size(values, 1)
+      end if
+      if (ksize /= vsize) return
+      allocate(keywords_ptrs(ksize))
+      allocate(values_ptrs(ksize))
+      do i = 1 , ksize
+        keywords_strs(i) = cstr(keywords(i))
+        keywords_ptrs(i) = c_loc(keywords_strs(i))
+        values_strs(i) = cstr(values(i))
+        values_ptrs(i) = c_loc(values_strs(i))
+      end do
+      pgconn = pqconnectdbparams(keywords_ptrs, values_ptrs, int(expand_dbname, kind=c_int))
+      deallocate(keywords_ptrs)
+      deallocate(values_ptrs)
+    end function connectdbparams
 
 
 ! PQconnectStartParams
