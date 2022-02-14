@@ -5,7 +5,7 @@ program tester
   implicit none
   integer :: stat
   stat = 0
-  print *, " Database connection tests"
+  print *, " ... database connection tests ... "
   call run_testsuite(collect_tests_connect, error_unit, stat)
   if (stat > 0) then
     write(error_unit, '(i0, 1x, a)') stat, "test(s) failed!"

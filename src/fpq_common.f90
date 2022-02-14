@@ -1,9 +1,10 @@
 module fpq_common
   use, intrinsic :: iso_c_binding
+  use stdlib_string_type
   implicit none
   private
 
-  public :: cstr, c_f_str_ptr
+  public :: cstr, dstr, c_f_str_ptr
 
   interface
 
@@ -46,11 +47,20 @@ module fpq_common
     function cstr(str) result(r)
       !! ## Returns a NULL terminated string.
       character(len=*), intent(in) :: str
-        !! String.
+        !! regular string.
       character(len=:), allocatable :: r
         !! NULL terminated string.
       r = str // c_null_char
     end function cstr
+
+    function dstr(str) result(r)
+      !! ## Returns a NULL terminated string.
+      type(string_type), intent(in) :: str
+        !! string type.
+      type(string_type) :: r
+        !! NULL terminated string.
+      r = str // c_null_char
+    end function dstr
 
 end module fpq_common
 

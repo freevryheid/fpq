@@ -2,6 +2,7 @@ module tests_connect
   use, intrinsic :: iso_c_binding
   use fpq
   use testdrive, only: error_type, unittest_type, new_unittest, check
+  use stdlib_string_type
   implicit none
   private
   public :: collect_tests_connect
@@ -18,10 +19,14 @@ module tests_connect
     subroutine test_connectdbparams(error)
       type(error_type), allocatable, intent(out) :: error
       type(c_ptr) :: pgconn
-      character(len=:), allocatable :: keywords(:)
-      character(len=:), allocatable :: values(:)
-      keywords = [""]
-      values   = [""]
+      type(string_type) :: keywords(3)
+      type(string_type) :: values(3)
+      keywords(1) = "host"
+      values(1) = "localhost"
+      keywords(2) = "port"
+      values(2) = "5432"
+      keywords(3) = "dbname"
+      values(3) = "smgr"
       pgconn = connectdbparams(keywords, values, 0)
       call check(error, status(pgconn), CONNECTION_OK)
       call finish(pgconn)

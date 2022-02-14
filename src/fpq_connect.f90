@@ -1,5 +1,6 @@
 module fpq_connect
   use, intrinsic :: iso_c_binding
+  use stdlib_string_type
   use fpq_common
   implicit none
   private
@@ -35,6 +36,14 @@ module fpq_connect
     !!  Negotiating GSSAPI.
   integer, parameter, public :: CONNECTION_CHECK_TARGET = 12
     !!  Check if we have a proper target connection.
+
+  ! PostgresPollingStatusType parameters
+  ! TODO - perhaps move to fqp-status
+  integer, parameter, public :: PGRES_POLLING_FAILED = 0
+  integer, parameter, public :: PGRES_POLLING_READING = 1 !! These two indicate that one may use select before polling again.
+  integer, parameter, public :: PGRES_POLLING_WRITING = 2
+  integer, parameter, public :: PGRES_POLLING_OK = 3
+  integer, parameter, public :: PGRES_POLLING_ACTIVE = 4  !! unused; keep for awhile for backwards compatibility
 
   ! [TODO - for document purposes, move this to a new module]
   ! Ping parameters
@@ -99,11 +108,15 @@ module fpq_connect
     end function pqconnectstartparams
 
     ! PGconn *PQconnectStart(const char *conninfo);
-    ! STILL TO DO
+    function pqconnectstart(conninfo) bind(c, name='PQconnectStart') result(pgconn)
+      import :: c_char, c_ptr
+      implicit none
+      character(kind=c_char), intent(in) :: conninfo
+      type(c_ptr) :: pgconn
+    end function pqconnectdb
 
     ! PostgresPollingStatusType PQconnectPoll(PGconn *conn);
     ! STILL TO DO
-
 
     ! PQconninfoOption *PQconndefaults(void);
     !
@@ -179,15 +192,85 @@ module fpq_connect
     !! little memory even to allocate the *PGconn* object. The [[status]] function
     !! should be called to check the return value for a successful connection
     !! before queries are sent via the connection object.
+    !!
+    !! The functions [connectstartparams], [connectstart] and [connectpoll]
+    !! are used to open a connection to a database
+    !! server such that your application's thread of execution is
+    !! not blocked on remote I/O whilst doing so.
+    !! The point of this approach is that the waits for I/O to complete
+    !! can occur in the application's main loop, rather than down
+    !! inside PQconnectdbParams or PQconnectdb, and so the application
+    !! can manage this operation in parallel with other activities.
+    !!
+    !! With [connectstartparams], the database connection is made using the
+    !! parameters taken from the keywords and values arrays, and controlled
+    !! by *expand_dbname*, as described for [connectdbparams].
+    !!
+    !! With [connectstart], the database connection is made using the
+    !! parameters taken from the string conninfo as described above
+    !! for [connectdb].
+    !!
+    !! Neither [connectstartparams] nor [connectstart] nor [connectpoll] will
+    !! block, so long as a number of restrictions are met:
+    !!    - The hostaddr parameter must be used appropriately to prevent DNS
+    !! queries from being made. See the
+    !! [documentation](https://www.postgresql.org/docs/9.5/libpq-connect.html#LIBPQ-PARAMKEYWORDS)
+    !! of this parameter for details.
+    !!    - If you call [trace], ensure that the stream object into which you
+    !! trace will not block.
+    !!    - You must ensure that the socket is in the appropriate state
+    !! before calling [connectpoll], as described below.
+    !!
+    !! @Note Use of [connectstartparams] is analogous to [connectstart] shown below.
+    !!
+    !! To begin a nonblocking connection request, call
+    !! [connectstart] or [connectstartparams]. If the result is null,
+    !! then libpq has been unable to allocate a new *PGconn* structure.
+    !! Otherwise, a valid *PGconn* pointer is returned
+    !! (though not yet representing a valid connection to the database).
+    !! Next call [status](conn). If the result is CONNECTION_BAD,
+    !! the connection attempt has already failed, typically because of
+    !! invalid connection parameters.
+    !!
+    !! If [connectstart] or [connectstartparams] succeeds,
+    !! the next stage is to poll libpq so that it can proceed with the
+    !! connection sequence. Use [socket](conn) to obtain the
+    !! descriptor of the socket underlying the database connection.
+    !! (Caution: do not assume that the socket remains the same
+    !! across [connectpoll] calls.) Loop thus:
+    !! If [connectpoll](conn) last returned PGRES_POLLING_READING,
+    !! wait until the socket is ready to read
+    !! (as indicated by select(), poll(), or similar system function).
+    !! Then call [connectpoll](conn) again. Conversely, if
+    !! PQconnectPoll(conn) last returned PGRES_POLLING_WRITING,
+    !! wait until the socket is ready to write, then call
+    !! [connectpoll](conn) again. On the first iteration, i.e.,
+    !! if you have yet to call [connectpoll], behave as if it last
+    !! returned PGRES_POLLING_WRITING. Continue this loop until
+    !! [connectpoll](conn) returns PGRES_POLLING_FAILED,
+    !! indicating the connection procedure has failed, or
+    !! PGRES_POLLING_OK, indicating the connection has been successfully made.
+    !!
+    !! At any time during connection, the status of the connection
+    !! can be checked by calling [status]. If this call returns
+    !! CONNECTION_BAD, then the connection procedure has failed;
+    !! if the call returns CONNECTION_OK, then the connection is ready.
+    !! Both of these states are equally detectable from the return value
+    !! of [connectpoll], described above. Other states might also occur
+    !! during (and only during) an asynchronous connection procedure.
+    !! These indicate the current stage of the connection procedure
+    !! and might be useful to provide feedback to the user for example.
+    !! These statuses are:
 
     function connectdbparams(keywords, values, expand_dbname) result(pgconn)
       !! @Bug FIXME - this uses 2 string arrays - imlementation appears buggy.
       !! Use [[dbconnect]] instead.
-      !!
+
       !! Makes a new connection to the database server.
       !! This function opens a new database connection using the parameters
       !! taken from two string arrays.
-      character(len=:), allocatable, intent(in) :: keywords(:)
+      ! character(len=:), allocatable, intent(in) :: keywords(:)
+      type(string_type), intent(in) :: keywords(0:)
         !! An array of strings, each one being a keyword. Unlike [[setdbLogin]]
         !! below, the parameter set can be extended without changing the
         !! function signature, so use of this function (or its nonblocking
@@ -195,7 +278,8 @@ module fpq_connect
         !! new application programming.
         !! The currently recognized parameter keywords are listed
         !! [here](https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-PARAMKEYWORDS).
-      character(len=:), allocatable, intent(in) :: values(:)
+      ! character(len=:), allocatable, intent(in) :: values(:)
+      type(string_type), intent(in) :: values(0:)
         !! Array of corresponding values for each keyword.
         !! The passed arrays can be empty to use all default parameters, or
         !! can contain one or more parameter settings. They must be matched in
@@ -220,8 +304,8 @@ module fpq_connect
         !! (https://www.postgresql.org/docs/current/libpq-envars.html)
         !! is set, its value is used. If the environment variable is not set
         !! either, then the parameter's built-in default value is used.
-      character, target :: keywords_strs(50)  ! There are currently 38 possible keywords
-      character, target :: values_strs(50)
+      type(string_type), target :: keywords_strs(0:50) !  There are currently 38 possible keywords
+      type(string_type), target :: values_strs(0:50)
       type(c_ptr), allocatable :: keywords_ptrs(:)
       type(c_ptr), allocatable :: values_ptrs(:)
       integer, intent(in) :: expand_dbname
@@ -239,19 +323,15 @@ module fpq_connect
         !! Database connection pointer.
       integer i, ksize, vsize
       pgconn = c_null_ptr
-      if (allocated(keywords)) then
-        ksize = size(keywords, 1)
-      end if
-      if (allocated(values)) then
-        vsize = size(values, 1)
-      end if
+      ksize = size(keywords, 1)
+      vsize = size(values, 1)
       if (ksize /= vsize) return
-      allocate(keywords_ptrs(ksize))
-      allocate(values_ptrs(ksize))
-      do i = 1 , ksize
-        keywords_strs(i) = cstr(keywords(i))
+      allocate(keywords_ptrs(0:ksize))
+      allocate(values_ptrs(0:ksize))
+      do i = 0, ksize-1
+        keywords_strs(i) = dstr(keywords(i))
         keywords_ptrs(i) = c_loc(keywords_strs(i))
-        values_strs(i) = cstr(values(i))
+        values_strs(i) = dstr(values(i))
         values_ptrs(i) = c_loc(values_strs(i))
       end do
       pgconn = pqconnectdbparams(keywords_ptrs, values_ptrs, int(expand_dbname, kind=c_int))
@@ -317,10 +397,8 @@ module fpq_connect
     function connectstartparams(keywords, values, expand_dbname) result(pgconn)
       !! @Bug FIXME - this uses 2 string arrays - imlementation appears buggy.
       !! Use [[connectstart]] instead.
-      !!
-      !! Makes a new connection to the database server in a non-blocking manner.
-      !! [HERE]
 
+      !! Makes a new connection to the database server in a non-blocking manner.
       character(len=:), allocatable, intent(in) :: keywords(:)
         !! An array of strings, each one being a keyword. Unlike [[setdbLogin]]
         !! below, the parameter set can be extended without changing the
@@ -391,41 +469,21 @@ module fpq_connect
       pgconn = pqconnectdbparams(keywords_ptrs, values_ptrs, int(expand_dbname, kind=c_int))
       deallocate(keywords_ptrs)
       deallocate(values_ptrs)
-    end function connectdbparams
+    end function connectstartparams
 
+    function connectstart(conninfo) result(conn)
+      !! Makes a new non-blocking connection to the database server.
+      character(len=*), intent(in) :: conninfo
+        !! See [connection strings]
+        !! (https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING)
+        !! for further information.
+      type(c_ptr) :: conn
+        !! Database connection pointer.
+      conn = pqconnectstart(cstr(conninfo))
+    end function connectstart
 
-! PQconnectStartParams
-! PQconnectStart
-! PQconnectPoll
-! Make a connection to the database server in a nonblocking manner.
-
-! PGconn *PQconnectStartParams(const char * const *keywords,
-!                              const char * const *values,
-!                              int expand_dbname);
-
-! PGconn *PQconnectStart(const char *conninfo);
 
 ! PostgresPollingStatusType PQconnectPoll(PGconn *conn);
-! These three functions are used to open a connection to a database server such that your application's thread of execution is not blocked on remote I/O whilst doing so. The point of this approach is that the waits for I/O to complete can occur in the application's main loop, rather than down inside PQconnectdbParams or PQconnectdb, and so the application can manage this operation in parallel with other activities.
-
-! With PQconnectStartParams, the database connection is made using the parameters taken from the keywords and values arrays, and controlled by expand_dbname, as described above for PQconnectdbParams.
-
-! With PQconnectStart, the database connection is made using the parameters taken from the string conninfo as described above for PQconnectdb.
-
-! Neither PQconnectStartParams nor PQconnectStart nor PQconnectPoll will block, so long as a number of restrictions are met:
-
-! The hostaddr parameter must be used appropriately to prevent DNS queries from being made. See the documentation of this parameter in Section 34.1.2 for details.
-
-! If you call PQtrace, ensure that the stream object into which you trace will not block.
-
-! You must ensure that the socket is in the appropriate state before calling PQconnectPoll, as described below.
-
-! To begin a nonblocking connection request, call PQconnectStart or PQconnectStartParams. If the result is null, then libpq has been unable to allocate a new PGconn structure. Otherwise, a valid PGconn pointer is returned (though not yet representing a valid connection to the database). Next call PQstatus(conn). If the result is CONNECTION_BAD, the connection attempt has already failed, typically because of invalid connection parameters.
-
-! If PQconnectStart or PQconnectStartParams succeeds, the next stage is to poll libpq so that it can proceed with the connection sequence. Use PQsocket(conn) to obtain the descriptor of the socket underlying the database connection. (Caution: do not assume that the socket remains the same across PQconnectPoll calls.) Loop thus: If PQconnectPoll(conn) last returned PGRES_POLLING_READING, wait until the socket is ready to read (as indicated by select(), poll(), or similar system function). Then call PQconnectPoll(conn) again. Conversely, if PQconnectPoll(conn) last returned PGRES_POLLING_WRITING, wait until the socket is ready to write, then call PQconnectPoll(conn) again. On the first iteration, i.e., if you have yet to call PQconnectPoll, behave as if it last returned PGRES_POLLING_WRITING. Continue this loop until PQconnectPoll(conn) returns PGRES_POLLING_FAILED, indicating the connection procedure has failed, or PGRES_POLLING_OK, indicating the connection has been successfully made.
-
-! At any time during connection, the status of the connection can be checked by calling PQstatus. If this call returns CONNECTION_BAD, then the connection procedure has failed; if the call returns CONNECTION_OK, then the connection is ready. Both of these states are equally detectable from the return value of PQconnectPoll, described above. Other states might also occur during (and only during) an asynchronous connection procedure. These indicate the current stage of the connection procedure and might be useful to provide feedback to the user for example. These statuses are:
-
 
 
 ! PQconndefaults
