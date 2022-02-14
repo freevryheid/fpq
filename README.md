@@ -1,8 +1,14 @@
 # fpq
-postgreSQL (pq) fortran bindings
+(most) postgreSQL (libpq) fortran bindings
 
-Still under development!
+WIP!
 
-Opted to break the functions into various fpq_modules as done per the libpq documentation. Still thinking how best to do this - may restructure. I've marked all libpq functions in the sources including those STILL TO DO. Some of these are obsolete and probably not necessary.
+Opted to break the functions into various fpq_modules as done per the libpq documentation.
 
-I'm unsure how to handle the documentation. The source include comments for FORD processing but there is always the option to include links to the online documenation. Why repeat and/or update if always available, right?
+The non-blocking and SSL functions have **NOT** been wrapped.
+
+[Documentation.](http://198.58.104.30:8080/static/doc/index.html)
+
+Uses stdlib string_type to allow arbitrary character lengths in string arrays. Tests currently failing when using these functions (see connectdbparams).
+
+

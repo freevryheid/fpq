@@ -10,23 +10,29 @@ module tests_connect
     subroutine collect_tests_connect(testsuite)
       type(unittest_type), allocatable, intent(out) :: testsuite(:)
       testsuite = [                                                     &
-        new_unittest("test for connectdbparams", test_connectdbparams), &
-        new_unittest("test for connectdbs", test_connectdb),            &
+        new_unittest("test for ping", test_ping),                       &
+        new_unittest("test for connectdb", test_connectdb),             &
         new_unittest("test for setdblogin", test_setdblogin),           &
-        new_unittest("test for setdb", test_setdb)                      &
+        new_unittest("test for setdb", test_setdb),                     &
+        new_unittest("test for connectdbparams", test_connectdbparams)  &
+        ! TODO - FIX connectdbparams first
+        ! new_unittest("test for connectstartparams", test_connectstartparams),        &
       ]
     end subroutine collect_tests_connect
+    subroutine test_ping(error)
+      type(error_type), allocatable, intent(out) :: error
+      character(len=:), allocatable :: conninfo
+      conninfo = ""
+      call check(error, ping(conninfo), PQPING_OK)
+      if (allocated(error)) return
+    end subroutine test_ping
     subroutine test_connectdbparams(error)
       type(error_type), allocatable, intent(out) :: error
       type(c_ptr) :: pgconn
-      type(string_type) :: keywords(3)
-      type(string_type) :: values(3)
-      keywords(1) = "host"
-      values(1) = "localhost"
-      keywords(2) = "port"
-      values(2) = "5432"
-      keywords(3) = "dbname"
-      values(3) = "smgr"
+      type(string_type) :: keywords(1)
+      type(string_type) :: values(1)
+      keywords(1) = " "
+      values(1) = " "
       pgconn = connectdbparams(keywords, values, 0)
       call check(error, status(pgconn), CONNECTION_OK)
       call finish(pgconn)
