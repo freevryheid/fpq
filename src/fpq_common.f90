@@ -1,10 +1,9 @@
 module fpq_common
   use, intrinsic :: iso_c_binding
-  use stdlib_string_type
   implicit none
   private
 
-  public :: cstr, dstr, c_f_str_ptr
+  public :: c_f_str_ptr
 
   interface
 
@@ -31,7 +30,7 @@ module fpq_common
     end function copy
 
     subroutine c_f_str_ptr(c_str, f_str)
-      !! ## Extract fortran string from a C pointer.
+      !! ## Extract fortran string from a c pointer.
       type(c_ptr), intent(in) :: c_str
       character(len=:), allocatable, intent(out) :: f_str
       character(kind=c_char), pointer :: ptrs(:)
@@ -44,23 +43,14 @@ module fpq_common
       f_str = copy(ptrs)
     end subroutine c_f_str_ptr
 
-    function cstr(str) result(r)
-      !! ## Returns a NULL terminated string.
-      character(len=*), intent(in) :: str
-        !! regular string.
-      character(len=:), allocatable :: r
-        !! NULL terminated string.
-      r = str // c_null_char
-    end function cstr
-
-    function dstr(str) result(r)
-      !! ## Returns a NULL terminated string.
-      type(string_type), intent(in) :: str
-        !! string type.
-      type(string_type) :: r
-        !! NULL terminated string.
-      r = str // c_null_char
-    end function dstr
+    ! function cstr(str) result(r)
+    !   !! Returns NULL terminated string.
+    !   character(len=*), intent(in) :: str
+    !     !! Fortran string.
+    !   character(len=:), allocatable :: r
+    !     !! NULL terminated string.
+    !   r = str // c_null_char
+    ! end function cstr
 
 end module fpq_common
 
