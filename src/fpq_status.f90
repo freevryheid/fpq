@@ -26,8 +26,14 @@ module fpq_status
   public :: status
   public :: transactionstatus
   public :: parameterstatus
+  public :: protocolversion
   public :: serverversion
   public :: errormessage
+  public :: socket
+  public :: backendpid
+  public :: connectionneedspassword
+  public :: connectionusedpassword
+  public :: sslinuse
 
   interface
 
@@ -125,21 +131,29 @@ module fpq_status
     end function transactionstatus
 
     ! const char *PQparameterStatus(const PGconn *conn, const char *paramName);
-    ! HERE
-    function parameterstatus(pgconn, name) bind(c, name='PQparameterStatus') result(r)
+    ! FIXME
+    function parameterstatus(pgconn, param) bind(c, name='PQparameterStatus') result(r)
       !! Looks up a current parameter setting of the server.
       import :: c_char, c_ptr
       implicit none
       type(c_ptr), intent(in), value :: pgconn
         !! Database connection pointer.
-      character(kind=c_char), intent(in) :: name
-        !! Parameter name.
-      ! type(c_ptr) :: r
-      character(kind=c_char) :: r
+      character(kind=c_char), intent(in) :: param
+        !! Parameter name e.g server_version, server_encoding, client_encoding,
+        !! application_name, is_superuser, session_authorization, DateStyle,
+        !! IntervalStyle, TimeZone, integer_datetimes, and standard_conforming_strings, etc.
+      type(c_ptr) :: r
     end function parameterstatus
 
     ! int PQprotocolVersion(const PGconn *conn);
-    ! STILL TO DO
+    function protocolversion(pgconn) bind(c, name='PQprotocolVersion') result(r)
+      !! Interrogates the frontend/backend protocol being used.
+      import :: c_ptr, c_int
+      implicit none
+      type(c_ptr), intent(in), value :: pgconn
+        !! Database connection pointer.
+      integer(kind=c_int) :: r
+    end function protocolversion
 
     ! int PQserverVersion(const PGconn *conn);
     function serverversion(pgconn) bind(c, name='PQserverVersion') result(r)
@@ -163,22 +177,60 @@ module fpq_status
     end function errormessage
 
     ! int PQsocket(const PGconn *conn);
-    ! STILL TO DO
+    function socket(pgconn) bind(c, name='PQsocket') result(r)
+      !! Obtains the file descriptor number of the connection socket to the server.
+      import :: c_ptr, c_int
+      implicit none
+      type(c_ptr), intent(in), value :: pgconn
+        !! Database connection pointer.
+      integer(kind=c_int) :: r
+    end function socket
 
     ! int PQbackendPID(const PGconn *conn);
-    ! STILL TO DO
+    function backendpid(pgconn) bind(c, name='PQbackendPID') result(r)
+      !! Returns the process ID (PID) of the backend process handling this connection.
+      import :: c_ptr, c_int
+      implicit none
+      type(c_ptr), intent(in), value :: pgconn
+        !! Database connection pointer.
+      integer(kind=c_int) :: r
+    end function backendpid
 
     ! int PQconnectionNeedsPassword(const PGconn *conn);
-    ! STILL TO DO
+    function connectionneedspassword(pgconn) bind(c, name='PQconnectionNeedsPassword') result(r)
+      !! Returns true (1) if the connection authentication method required a password,
+      !! but none was available. Returns false (0) if not.
+      import :: c_ptr, c_int
+      implicit none
+      type(c_ptr), intent(in), value :: pgconn
+        !! Database connection pointer.
+      integer(kind=c_int) :: r
+    end function connectionneedspassword
 
     ! int PQconnectionUsedPassword(const PGconn *conn);
-    ! STILL TO DO
+    function connectionusedpassword(pgconn) bind(c, name='PQconnectionUsedPassword') result(r)
+      !! Returns true (1) if the connection authentication method used a password.
+      !! Returns false (0) if not.
+      import :: c_ptr, c_int
+      implicit none
+      type(c_ptr), intent(in), value :: pgconn
+        !! Database connection pointer.
+      integer(kind=c_int) :: r
+    end function connectionusedpassword
 
     ! int PQsslInUse(const PGconn *conn);
-    ! STILL TO DO
+    function sslinuse(pgconn) bind(c, name='PQsslInUse') result(r)
+      !! Returns true (1) if the connection authentication method used a password.
+      !! Returns false (0) if not.
+      import :: c_ptr, c_int
+      implicit none
+      type(c_ptr), intent(in), value :: pgconn
+        !! Database connection pointer.
+      integer(kind=c_int) :: r
+    end function sslinuse
 
     ! const char *PQsslAttribute(const PGconn *conn, const char *attribute_name);
-    ! STILL TO DOy
+    ! STILL TO DO
 
     ! const char * const * PQsslAttributeNames(const PGconn *conn);
     ! STILL TO DO
@@ -190,120 +242,6 @@ module fpq_status
     ! STILL TO DO
 
   end interface
-
-  ! contains
-
-    ! function db(pgconn) result(r)
-    !   !! Returns the database name of the connection.
-    !   type(c_ptr), intent(in) :: pgconn
-    !     !! Database connection pointer.
-    !   character(len=:), allocatable :: r
-    !     !! Database name.
-    !   type(c_ptr) :: ptr
-    !   ptr = pqdb(pgconn)
-    !   if (c_associated(ptr)) then
-    !     call c_f_str_ptr(ptr, r)
-    !   end if
-    ! end function db
-
-    ! function user(pgconn) result(r)
-    !   !! Returns the user name of the connection.
-    !   type(c_ptr), intent(in) :: pgconn
-    !     !! Database connection pointer.
-    !   character(len=:), allocatable :: r
-    !     !! Database name.
-    !   type(c_ptr) :: ptr
-    !   ptr = pquser(pgconn)
-    !   if (c_associated(ptr)) then
-    !     call c_f_str_ptr(ptr, r)
-    !   end if
-    ! end function user
-
-    ! function pass(pgconn) result(r)
-    !   !! Returns the password of the connection.
-    !   type(c_ptr), intent(in) :: pgconn
-
-    !     !! Database connection pointer.
-    !   character(len=:), allocatable :: r
-    !     !! Password.
-    !   type(c_ptr) :: ptr
-    !   ptr = pqpass(pgconn)
-    !   if (c_associated(ptr)) then
-    !     call c_f_str_ptr(ptr, r)
-    !   end if
-    ! end function pass
-
-    ! function host(pgconn) result(r)
-    !   !! Returns the server host name of the active connection.
-    !   type(c_ptr), intent(in) :: pgconn
-    !     !! Database connection pointer.
-    !   character(len=:), allocatable :: r
-    !     !! Hostname.
-    !   type(c_ptr) :: ptr
-    !   ptr = pqhost(pgconn)
-    !   if (c_associated(ptr)) then
-    !     call c_f_str_ptr(ptr, r)
-    !   end if
-    ! end function host
-
-    ! function hostaddr(pgconn) result(r)
-    !   !! Returns the server IP address of the active connection.
-    !   type(c_ptr), intent(in) :: pgconn
-    !     !! Database connection pointer.
-    !   character(len=:), allocatable :: r
-    !     !! Hostaddr.
-    !   type(c_ptr) :: ptr
-    !   ptr = pqhostaddr(pgconn)
-    !   if (c_associated(ptr)) then
-    !     call c_f_str_ptr(ptr, r)
-    !   end if
-    ! end function hostaddr
-
-    ! function port(pgconn) result(r)
-    !   !! Returns the port of the active connection.
-    !   type(c_ptr), intent(in) :: pgconn
-    !     !! Database connection pointer.
-    !   character(len=:), allocatable :: r
-    !     !! Port.
-    !   type(c_ptr) :: ptr
-    !   ptr = pqport(pgconn)
-    !   if (c_associated(ptr)) then
-    !     call c_f_str_ptr(ptr, r)
-    !   end if
-    ! end function port
-
-    ! ! function status(pgconn) result(r)
-    ! !   !! Returns the status of the connection.
-    ! !   type(c_ptr), intent(in) :: pgconn
-    ! !     !! Database connection pointer.
-    ! !   integer(kind=c_int) :: r
-    ! !     !! Status.
-    ! !   r = pqstatus(pgconn)
-    ! ! end function status
-
-    ! function serverversion(pgconn) result(r)
-    !   !! Returns an integer representing the server version.
-    !   type(c_ptr), intent(in) :: pgconn
-    !     !! Database connection pointer.
-    !   integer(kind=c_int) :: r
-    !     !! Result by multiplying the server's major version number by 10000
-    !     !! and adding the minor version number.
-    !   r = pqserverversion(pgconn)
-    ! end function serverversion
-
-    ! function errormessage(pgconn) result(r)
-    !   !! Returns the error message most recently generated by an operation on the connection.
-    !   type(c_ptr), intent(in) :: pgconn
-
-    !     !! Database connection pointer.
-    !   character(len=:), allocatable :: r
-    !     !! Error.
-    !   type(c_ptr) :: ptr
-    !   ptr = pqerrormessage(pgconn)
-    !   if (c_associated(ptr)) then
-    !     call c_f_str_ptr(ptr, r)
-    !   end if
-    ! end function errormessage
 
 end module fpq_status
 

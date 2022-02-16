@@ -3,7 +3,7 @@ module fpq_common
   implicit none
   private
 
-  public :: c_f_str_ptr
+  public :: copy, c_strlen, c_f_str_ptr
 
   interface
 
