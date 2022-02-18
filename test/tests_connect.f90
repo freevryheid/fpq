@@ -20,52 +20,38 @@ module tests_connect
     end subroutine collect_tests_connect
 
     subroutine test_ping(error)
-      ! ping the postgresql server with defaults
+      ! ping the postgresql server.
       type(error_type), allocatable, intent(out) :: error
-      character(kind=c_char) :: conninfo
-      conninfo = "" // c_null_char
-      call check(error, ping(conninfo), PQPING_OK)
+      call check(error, ping(cstr("dbname=smgr")), PQPING_OK)
       if (allocated(error)) return
     end subroutine test_ping
 
     subroutine test_pingparams(error)
-      ! keys and vals are arrays of string pointers
+      ! keys and vals are string arrays
       type(error_type), allocatable, intent(out) :: error
-      character(kind=c_char), target :: key
-      character(kind=c_char), target :: val
-      type(c_ptr), allocatable :: keys(:)
-      type(c_ptr), allocatable :: vals(:)
-      allocate(keys(1))
-      allocate(vals(1))
-      key = "" // c_null_char
-      val = "" // c_null_char
-      keys(1) = c_loc(key)
-      vals(1) = c_loc(val)
-      call check(error, pingparams(keys, vals, int(0, kind=c_int)), PQPING_OK)
-      deallocate(keys)
-      deallocate(vals)
+      character(len=10), dimension(2), target :: keys, vals
+      ! not sure howto define arrays have varying string lengths
+      ! shouldn't be an issue as c uses null char to delineate strings,
+      ! which we'll provide:
+      keys = [character(len=10) :: cstr("user"), cstr("dbname")]
+      vals = [character(len=10) :: cstr("grassy"), cstr("smgr")]
+      call check(error, pingparams(c_loc(keys), c_loc(vals), int(0, kind=c_int)), PQPING_OK)
       if (allocated(error)) return
     end subroutine test_pingparams
 
     subroutine test_connectdbparams(error)
-      ! keys and vals are arrays of string pointers
+      ! keys and vals are string arrays
       type(error_type), allocatable, intent(out) :: error
+      character(len=10), dimension(2), target :: keys, vals
       type(c_ptr) :: pgconn
-      character(kind=c_char), target :: key
-      character(kind=c_char), target :: val
-      type(c_ptr), allocatable :: keys(:)
-      type(c_ptr), allocatable :: vals(:)
-      allocate(keys(1))
-      allocate(vals(1))
-      key = "" // c_null_char
-      val = "" // c_null_char
-      keys(1) = c_loc(key)
-      vals(1) = c_loc(val)
-      pgconn = connectdbparams(keys, vals, int(0, kind=c_int))
+      ! not sure howto define arrays have varying string lengths
+      ! shouldn't be an issue as c uses null char to delineate strings,
+      ! which we'll provide:
+      keys = [character(len=10) :: cstr("user"), cstr("dbname")]
+      vals = [character(len=10) :: cstr("grassy"), cstr("smgr")]
+      pgconn = connectdbparams(c_loc(keys), c_loc(vals), int(0, kind=c_int))
       call check(error, status(pgconn), CONNECTION_OK)
       call finish(pgconn)
-      deallocate(keys)
-      deallocate(vals)
       if (allocated(error)) return
     end subroutine test_connectdbparams
 
@@ -73,9 +59,7 @@ module tests_connect
       ! simple connect
       type(error_type), allocatable, intent(out) :: error
       type(c_ptr) :: pgconn
-      character(kind=c_char) :: conninfo
-      conninfo = "" // c_null_char
-      pgconn = connectdb(conninfo)
+      pgconn = connectdb(cstr(""))
       call check(error, status(pgconn), CONNECTION_OK)
       call finish(pgconn)
       if (allocated(error)) return
@@ -85,15 +69,7 @@ module tests_connect
       ! yet another connect
       type(error_type), allocatable, intent(out) :: error
       type(c_ptr) :: pgconn
-      character(kind=c_char) :: pghost, pgport, pgoptions, pgtty, dbname, login, pwd
-      pghost = "" // c_null_char
-      pgport = "" // c_null_char
-      pgoptions = "" // c_null_char
-      pgtty = "" // c_null_char
-      dbname = "" // c_null_char
-      login = "" // c_null_char
-      pwd = "" // c_null_char
-      pgconn = setdblogin(pghost, pgport, pgoptions, pgtty, dbname, login, pwd)
+      pgconn = setdblogin(cstr(""), cstr("") , cstr(""), cstr(""), cstr(""), cstr(""), cstr(""))
       call check(error, status(pgconn), CONNECTION_OK)
       call finish(pgconn)
       if (allocated(error)) return

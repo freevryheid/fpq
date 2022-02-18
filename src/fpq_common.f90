@@ -3,7 +3,7 @@ module fpq_common
   implicit none
   private
 
-  public :: copy, c_strlen, c_f_str_ptr
+  public :: cstr, c_f_str_ptr
 
   interface
 
@@ -43,14 +43,14 @@ module fpq_common
       f_str = copy(ptrs)
     end subroutine c_f_str_ptr
 
-    ! function cstr(str) result(r)
-    !   !! Returns NULL terminated string.
-    !   character(len=*), intent(in) :: str
-    !     !! Fortran string.
-    !   character(len=:), allocatable :: r
-    !     !! NULL terminated string.
-    !   r = str // c_null_char
-    ! end function cstr
+    function cstr(str) result(r)
+      !! Returns NULL terminated string.
+      character(len=*), intent(in) :: str
+        !! Fortran string.
+      character(len=:), allocatable :: r
+        !! NULL terminated string.
+      r = str // c_null_char
+    end function cstr
 
 end module fpq_common
 

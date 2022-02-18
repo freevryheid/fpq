@@ -34,11 +34,9 @@ module tests_status
 
     subroutine test_db(error)
       type(error_type), allocatable, intent(out) :: error
-      character(kind=c_char) :: conninfo
       character(len=:), allocatable :: r
       type(c_ptr) :: pgconn, ptr
-      conninfo = "" // c_null_char
-      pgconn = connectdb(conninfo)
+      pgconn = connectdb(cstr(""))
       ptr = db(pgconn)
       if (c_associated(ptr)) call c_f_str_ptr(ptr, r)
       call check(error, r, trim(logname))
@@ -48,11 +46,9 @@ module tests_status
 
     subroutine test_user(error)
       type(error_type), allocatable, intent(out) :: error
-      character(kind=c_char) :: conninfo
       character(len=:), allocatable :: r
       type(c_ptr) :: pgconn, ptr
-      conninfo = "" // c_null_char
-      pgconn = connectdb(conninfo)
+      pgconn = connectdb(cstr(""))
       ptr = user(pgconn)
       if (c_associated(ptr)) call c_f_str_ptr(ptr, r)
       call check(error, r, trim(logname))
@@ -62,11 +58,9 @@ module tests_status
 
     subroutine test_pass(error)
       type(error_type), allocatable, intent(out) :: error
-      character(kind=c_char) :: conninfo
       character(len=:), allocatable :: r
       type(c_ptr) :: pgconn, ptr
-      conninfo = "" // c_null_char
-      pgconn = connectdb(conninfo)
+      pgconn = connectdb(cstr(""))
       ptr = pass(pgconn)
       if (c_associated(ptr)) call c_f_str_ptr(ptr, r)
       call check(error, r, "")
@@ -76,11 +70,9 @@ module tests_status
 
     subroutine test_host(error)
       type(error_type), allocatable, intent(out) :: error
-      character(kind=c_char) :: conninfo
       character(len=:), allocatable :: r
       type(c_ptr) :: pgconn, ptr
-      conninfo = "" // c_null_char
-      pgconn = connectdb(conninfo)
+      pgconn = connectdb(cstr(""))
       ptr = host(pgconn)
       if (c_associated(ptr)) call c_f_str_ptr(ptr, r)
       call check(error, r, "/run/postgresql")
@@ -90,11 +82,9 @@ module tests_status
 
     subroutine test_hostaddr(error)
       type(error_type), allocatable, intent(out) :: error
-      character(kind=c_char) :: conninfo
       character(len=:), allocatable :: r
       type(c_ptr) :: pgconn, ptr
-      conninfo = "" // c_null_char
-      pgconn = connectdb(conninfo)
+      pgconn = connectdb(cstr(""))
       ptr = hostaddr(pgconn)
       if (c_associated(ptr)) call c_f_str_ptr(ptr, r)
       call check(error, r, "")
@@ -104,11 +94,9 @@ module tests_status
 
     subroutine test_port(error)
       type(error_type), allocatable, intent(out) :: error
-      character(kind=c_char) :: conninfo
       character(len=:), allocatable :: r
       type(c_ptr) :: pgconn, ptr
-      conninfo = "" // c_null_char
-      pgconn = connectdb(conninfo)
+      pgconn = connectdb(cstr(""))
       ptr = port(pgconn)
       if (c_associated(ptr)) call c_f_str_ptr(ptr, r)
       call check(error, r, "5432")
@@ -118,11 +106,9 @@ module tests_status
 
     subroutine test_options(error)
       type(error_type), allocatable, intent(out) :: error
-      character(kind=c_char) :: conninfo
       character(len=:), allocatable :: r
       type(c_ptr) :: pgconn, ptr
-      conninfo = "" // c_null_char
-      pgconn = connectdb(conninfo)
+      pgconn = connectdb(cstr(""))
       ptr = options(pgconn)
       if (c_associated(ptr)) call c_f_str_ptr(ptr, r)
       call check(error, r, "")
@@ -133,33 +119,22 @@ module tests_status
     subroutine test_transactionstatus(error)
       type(error_type), allocatable, intent(out) :: error
       type(c_ptr) :: pgconn
-      character(kind=c_char) :: conninfo
-      conninfo = "" // c_null_char
-      pgconn = connectdb(conninfo)
+      pgconn = connectdb(cstr(""))
       call check(error, transactionstatus(pgconn), PQTRANS_IDLE)
       call finish(pgconn)
       if (allocated(error)) return
     end subroutine test_transactionstatus
 
     subroutine test_parameterstatus(error)
-      ! FIXME
       type(error_type), allocatable, intent(out) :: error
-      character(kind=c_char) :: conninfo, param
       character(len=:), allocatable :: rstatus, r
       type(c_ptr) :: pgconn
       type(c_ptr) :: ptr
-      conninfo = "" // c_null_char
-      param = "server_version" // c_null_char
       rstatus = "13.5"
-      pgconn = connectdb(conninfo)
-      call check(error, status(pgconn), CONNECTION_OK)
-      ptr = parameterstatus(pgconn, param)
-      if (.not. c_associated(ptr)) then
-        call skip_test(error, "FIXME")
-      else
-        call c_f_str_ptr(ptr, r)
-        call check(error, r, rstatus)
-      end if
+      pgconn = connectdb(cstr(""))
+      ptr = parameterstatus(pgconn, cstr("server_version"))
+      call c_f_str_ptr(ptr, r)
+      call check(error, r, rstatus)
       call finish(pgconn)
       if (allocated(error)) return
     end subroutine test_parameterstatus
@@ -167,9 +142,7 @@ module tests_status
     subroutine test_protocolversion(error)
       type(error_type), allocatable, intent(out) :: error
       type(c_ptr) :: pgconn
-      character(kind=c_char) :: conninfo
-      conninfo = "" // c_null_char
-      pgconn = connectdb(conninfo)
+      pgconn = connectdb(cstr(""))
       call check(error, protocolversion(pgconn), 3)
       call finish(pgconn)
       if (allocated(error)) return
@@ -178,9 +151,7 @@ module tests_status
     subroutine test_serverversion(error)
       type(error_type), allocatable, intent(out) :: error
       type(c_ptr) :: pgconn
-      character(kind=c_char) :: conninfo
-      conninfo = "" // c_null_char
-      pgconn = connectdb(conninfo)
+      pgconn = connectdb(cstr(""))
       call check(error, serverversion(pgconn), 130005)
       call finish(pgconn)
       if (allocated(error)) return
@@ -189,9 +160,7 @@ module tests_status
     subroutine test_socket(error)
       type(error_type), allocatable, intent(out) :: error
       type(c_ptr) :: pgconn
-      character(kind=c_char) :: conninfo
-      conninfo = "" // c_null_char
-      pgconn = connectdb(conninfo)
+      pgconn = connectdb(cstr(""))
       call check(error, socket(pgconn) >= 0)
       call finish(pgconn)
       if (allocated(error)) return
@@ -200,9 +169,7 @@ module tests_status
     subroutine test_backendpid(error)
       type(error_type), allocatable, intent(out) :: error
       type(c_ptr) :: pgconn
-      character(kind=c_char) :: conninfo
-      conninfo = "" // c_null_char
-      pgconn = connectdb(conninfo)
+      pgconn = connectdb(cstr(""))
       call check(error, backendpid(pgconn) > 0)
       call finish(pgconn)
       if (allocated(error)) return
@@ -211,9 +178,7 @@ module tests_status
     subroutine test_connectionneedspassword(error)
       type(error_type), allocatable, intent(out) :: error
       type(c_ptr) :: pgconn
-      character(kind=c_char) :: conninfo
-      conninfo = "" // c_null_char
-      pgconn = connectdb(conninfo)
+      pgconn = connectdb(cstr(""))
       call check(error, connectionneedspassword(pgconn), 0)
       call finish(pgconn)
       if (allocated(error)) return
@@ -222,9 +187,7 @@ module tests_status
     subroutine test_connectionusedpassword(error)
       type(error_type), allocatable, intent(out) :: error
       type(c_ptr) :: pgconn
-      character(kind=c_char) :: conninfo
-      conninfo = "" // c_null_char
-      pgconn = connectdb(conninfo)
+      pgconn = connectdb(cstr(""))
       call check(error, connectionusedpassword(pgconn), 0)
       call finish(pgconn)
       if (allocated(error)) return
@@ -233,9 +196,7 @@ module tests_status
     subroutine test_sslinuse(error)
       type(error_type), allocatable, intent(out) :: error
       type(c_ptr) :: pgconn
-      character(kind=c_char) :: conninfo
-      conninfo = "" // c_null_char
-      pgconn = connectdb(conninfo)
+      pgconn = connectdb(cstr(""))
       call check(error, sslinuse(pgconn), 0)
       call finish(pgconn)
       if (allocated(error)) return

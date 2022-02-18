@@ -44,25 +44,56 @@ module fpq_connect
   integer(kind=c_int), parameter, public :: PQPING_NO_ATTEMPT = 3
     !! Connection not attempted (bad params).
 
+  public :: ping
+  public :: pingparams
   public :: connectdbparams
   public :: connectdb
   public :: setdblogin
   public :: finish
   public :: reset
-  public :: ping
-  public :: pingparams
-
   interface
+
+    ! PGPing PQping(const char *conninfo);
+    function ping(conninfo) bind(c, name='PQping') result(r)
+      !! Reports the status of the server.
+      !! It is not necessary to supply correct user name, password,
+      !! or database name values to obtain the server status;
+      !! however, if incorrect values are provided,
+      !! the server will log a failed connection attempt.
+      import :: c_char, c_int
+      implicit none
+      character(kind=c_char), intent(in) :: conninfo
+        !! Connection string.
+      integer(kind=c_int) :: r
+    end function ping
+
+    ! PGPing PQpingParams(const char * const *keywords,
+    !                     const char * const *values,
+    !                     int expand_dbname);
+    function pingparams(keywords, values, expand_dbname) bind(c, name='PQpingParams') result(r)
+      !! Reports the status of the server.
+      import :: c_ptr, c_int
+      implicit none
+      type(c_ptr), intent(in) :: keywords(:)
+        !! Pointer to keyword string array
+      type(c_ptr), intent(in) :: values(:)
+        !! Pointer to value string array
+      integer(kind=c_int), intent(in) :: expand_dbname
+        !! Flag (see documentation).
+      integer(kind=c_int) :: r
+    end function pingparams
 
     ! PGconn *PQconnectdbParams(const char * const *keywords, const char * const *values, int expand_dbname);
     function connectdbparams(keywords, values, expand_dbname) bind(c, name='PQconnectdbParams') result(pgconn)
       !! Makes a new connection to the database server.
       import :: c_ptr, c_int
       implicit none
-      type(c_ptr), intent(in) :: keywords, values
-        !! Arrays of string pointers
+      type(c_ptr), intent(in) :: keywords(:)
+        !! Pointer to keyword string array
+      type(c_ptr), intent(in) :: values(:)
+        !! Pointer to value string array
       integer(kind=c_int), intent(in) :: expand_dbname
-        !! Flag.
+        !! Flag (see documentation).
       type(c_ptr) :: pgconn
         !! Database connection pointer.
     end function connectdbparams
@@ -111,31 +142,6 @@ module fpq_connect
       type(c_ptr), intent(in), value :: pgconn
         !! Database connection pointer.
     end subroutine reset
-
-    ! PGPing PQpingParams(const char * const *keywords,
-    !                     const char * const *values,
-    !                     int expand_dbname);
-    function pingparams(keywords, values, expand_dbname) bind(c, name='PQpingParams') result(r)
-      !! Reports the status of the server.
-      import :: c_ptr, c_int
-      implicit none
-      type(c_ptr), intent(in) :: keywords, values
-        !! Arrays of string pointers
-      integer(kind=c_int), intent(in) :: expand_dbname
-        !! Flag.
-      integer(kind=c_int) :: r
-        !! Database connection pointer.
-    end function pingparams
-
-    ! PGPing PQping(const char *conninfo);
-    function ping(conninfo) bind(c, name='PQping') result(r)
-      !! Reports the status of the server.
-      import :: c_char, c_int
-      implicit none
-      character(kind=c_char), intent(in) :: conninfo
-        !! Connection string.
-      integer(kind=c_int) :: r
-    end function ping
 
   end interface
 
