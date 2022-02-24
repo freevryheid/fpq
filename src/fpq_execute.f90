@@ -1,4 +1,5 @@
 module fpq_execute
+
   use, intrinsic :: iso_c_binding
   use fpq_common
   implicit none
@@ -25,36 +26,82 @@ module fpq_execute
     !! Copy In/Out (to and from server) data transfer started. This feature is currently used only for streaming replication, so this status should not occur in ordinary applications.
   integer(kind=c_int), parameter, public :: PGRES_SINGLE_TUPLE = 9
     !! The PGresult contains a single result tuple from the current command. This status occurs only when single-row mode has been selected for the query (see Section 34.6).
+  character(kind=c_char), parameter, public :: PG_DIAG_SEVERITY	= 'S'
+    !! The severity; the field contents are ERROR, FATAL, or PANIC
+    !! (in an error message), or WARNING, NOTICE, DEBUG, INFO, or LOG
+    !! (in a notice message), or a localized translation of one of these.
+    !! Always present.
+  character(kind=c_char), parameter, public :: PG_DIAG_SEVERITY_NONLOCALIZED = 'V'
 
-  public :: exec
-  public :: resultstatus
-  ! public :: resstatus
-  ! public :: resulterrormessage
-  ! public :: resulterrorfield
-  ! public :: clear
-  ! public :: ntuples
-  ! public :: nfields
-  ! public :: fname
-  ! public :: fnumber
-  ! public :: ftablecol
-  ! public :: fformat
-  ! public :: fmod
-  ! public :: fsize
-  ! public :: binarytuples
-  ! public :: nparams
-  ! public :: describeprepared
+  character(kind=c_char), parameter, public :: PG_DIAG_SQLSTATE	= 'C'
+
+  character(kind=c_char), parameter, public :: PG_DIAG_MESSAGE_PRIMARY = 'M'
+
+  character(kind=c_char), parameter, public :: PG_DIAG_MESSAGE_DETAIL = 'D'
+
+  character(kind=c_char), parameter, public :: PG_DIAG_MESSAGE_HINT = 'H'
+
+  character(kind=c_char), parameter, public :: PG_DIAG_STATEMENT_POSITION = 'P'
+
+  character(kind=c_char), parameter, public :: PG_DIAG_INTERNAL_POSITION = 'p'
+
+  character(kind=c_char), parameter, public :: PG_DIAG_INTERNAL_QUERY = 'q'
+
+  character(kind=c_char), parameter, public :: PG_DIAG_CONTEXTi = 'W'
+
+  character(kind=c_char), parameter, public :: PG_DIAG_SCHEMA_NAME = 's'
+
+  character(kind=c_char), parameter, public :: PG_DIAG_TABLE_NAME = 't'
+
+  character(kind=c_char), parameter, public :: PG_DIAG_COLUMN_NAME = 'c'
+
+  character(kind=c_char), parameter, public :: PG_DIAG_DATATYPE_NAME = 'd'
+
+  character(kind=c_char), parameter, public :: PG_DIAG_CONSTRAINT_NAME = 'n'
+
+  character(kind=c_char), parameter, public :: PG_DIAG_SOURCE_FILE = 'F'
+
+  character(kind=c_char), parameter, public :: PG_DIAG_SOURCE_LINE = 'L'
+
+  character(kind=c_char), parameter, public :: PG_DIAG_SOURCE_FUNCTION = 'R'
+
+
+  public :: pqexec
+  public :: pqresultstatus
+  public :: pqclear
+  public :: pqexecparams
+  public :: pqprepare
+  public :: pqexecprepared
+  public :: pqdescribeprepared
+  public :: pqresstatus
+  public :: pqresulterrormessage
+  public :: pqresulterrorfield
+  public :: ntuples
+  public :: nfields
+  public :: fname
+  public :: fnumber
+  public :: ftablecol
+  public :: fformat
+  public :: fmod
+  public :: fsize
+  public :: binarytuples
+  public :: nparams
 
   interface
 
     ! PGresult *PQexec(PGconn *conn, const char *command);
-    function exec(pgconn, command) bind(c, name='PQexec') result(pgresult)
+    function pqexec(pgconn, command) bind(c, name='PQexec') result(pgresult)
       !! Submits a command to the server and waits for the result.
       import :: c_ptr, c_char
       implicit none
-      type(c_ptr), value, intent(in) :: pgconn
+      type(c_ptr), intent(in), value :: pgconn
+        !! Database connection pointer.
       character(kind=c_char), intent(in) :: command
+        !! The command string can include multiple SQL commands
+        !! (separated by semicolons).
       type(c_ptr) :: pgresult
-    end function exec
+        !! Result pointer.
+    end function pqexec
 
     ! PGresult *PQexecParams(PGconn *conn,
     !                        const char *command,
@@ -64,14 +111,61 @@ module fpq_execute
     !                        const int *paramLengths,
     !                        const int *paramFormats,
     !                        int resultFormat);
-    ! STILL TO DO
+    function pqexecparams(pgconn, command, nparams, paramtypes, paramvalues, paramlengths, &
+      paramformats, resultformat) bind(c, name='PQexecParams') result(pgresult)
+      !! Submits a command to the server and waits for the result.
+      import :: c_ptr, c_char, c_int
+      implicit none
+      type(c_ptr), intent(in), value :: pgconn
+        !! Database connection pointer.
+      character(kind=c_char), intent(in) :: command
+        !! The command string.
+      integer(kind=c_int), intent(in), value :: nparams
+        !! The number of parameters supplied.
+        !! The array pointers can be NULL when *nparams* is zero.
+      type(c_ptr), intent(in) :: paramtypes(:)
+        !! By OID (tedious - see documentation).
+      type(c_ptr), intent(in) :: paramvalues(:)
+        !!  Parameter values.
+      type(c_ptr), intent(in) :: paramlengths(:)
+        !! Data lengths of binary-format parameters.
+        !! The array pointer can be null when there are no binary parameters.
+      type(c_ptr), intent(in) :: paramformats(:)
+        !! Specifies whether parameters are text
+        !! (put a zero in the array entry for the corresponding parameter)
+        !! or binary (put a one in the array entry for the corresponding parameter).
+        !! If the array pointer is null then all parameters are presumed to be text strings.
+      integer(kind=c_int), intent(in), value :: resultformat
+        !! Specify zero to obtain results in text format,
+        !! or one to obtain results in binary format.
+      type(c_ptr) :: pgresult
+        !! Result pointer.
+    end function pqexecparams
 
     ! PGresult *PQprepare(PGconn *conn,
     !                  const char *stmtName,
     !                  const char *query,
     !                  int nParams,
     !                  const Oid *paramTypes);
-    ! STILL TO DO
+    function pqprepare(pgconn, stmtname, query, nparams, paramtypes) bind(c, name='PQprepare') result(pgresult)
+      !! Submits a request to create a prepared statement with the given parameters,
+      !! and waits for completion.
+      import :: c_ptr, c_char, c_int
+      implicit none
+      type(c_ptr), intent(in), value :: pgconn
+        !! Database connection pointer.
+      character(kind=c_char), intent(in) :: stmtname
+        !! Statement name - can be "" for unnamed statement.The command string.d
+      character(kind=c_char), intent(in) :: query
+        !! The command string.
+      integer(kind=c_int), intent(in), value :: nparams
+        !! The number of parameters supplied.
+        !! The array pointers can be NULL when *nparams* is zero.
+      type(c_ptr), intent(in) :: paramtypes(:)
+        !! By OID (tedious - see documentation).
+      type(c_ptr) :: pgresult
+        !! Result pointer.
+    end function pqprepare
 
     ! PGresult *PQexecPrepared(PGconn *conn,
     !                          const char *stmtName,
@@ -80,98 +174,169 @@ module fpq_execute
     !                          const int *paramLengths,
     !                          const int *paramFormats,
     !                          int resultFormat);
-    ! STILL TO DO
+    function pqexecprepared(pgconn, stmtname, nparams, paramvalues, paramlengths, &
+      paramformats, resultformat) bind(c, name='PQexecPrepared') result(pgresult)
+      !! Sends a request to execute a prepared statement with given parameters,
+      !! and waits for the result.
+      import :: c_ptr, c_char, c_int
+      implicit none
+      type(c_ptr), intent(in), value :: pgconn
+        !! Database connection pointer.
+      character(kind=c_char), intent(in) :: stmtname
+        !! Statement name - as indicated in [[prepare]].
+      integer(kind=c_int), intent(in), value :: nparams
+        !! The number of parameters supplied.
+        !! The array pointers can be NULL when *nparams* is zero.
+      type(c_ptr), intent(in) :: paramvalues(:)
+        !!  Parameter values.
+      type(c_ptr), intent(in) :: paramlengths(:)
+        !! Data lengths of binary-format parameters.
+        !! The array pointer can be null when there are no binary parameters.
+      type(c_ptr), intent(in) :: paramformats(:)
+        !! Specifies whether parameters are text
+        !! (put a zero in the array entry for the corresponding parameter)
+        !! or binary (put a one in the array entry for the corresponding parameter).
+        !! If the array pointer is null then all parameters are presumed to be text strings.
+      integer(kind=c_int), intent(in), value :: resultformat
+        !! Specify zero to obtain results in text format,
+        !! or one to obtain results in binary format.
+      type(c_ptr) :: pgresult
+        !! Result pointer.
+    end function pqexecprepared
 
-    ! ! PGresult *PQdescribePrepared(PGconn *conn, const char *stmtName);
-    ! function pqdescribeprepared(conn, stmtname) bind(c, name='PQdescribePrepared') result(pgresult)
-    !   import :: c_ptr, c_char
-    !   implicit none
-    !   type(c_ptr), intent(in) :: conn
-    !   character(kind=c_char), intent(in) :: stmtname
-    !   type(c_ptr) :: pgresult
-    ! end function PQdescribePrepared
+    ! PGresult *PQdescribePrepared(PGconn *conn, const char *stmtName);
+    function pqdescribeprepared(pgconn, stmtname) bind(c, name='PQdescribePrepared') result(pgresult)
+      !! Submits a request to obtain information about the specified prepared statement,
+      !! and waits for completion.
+      import :: c_ptr, c_char
+      implicit none
+      type(c_ptr), intent(in), value :: pgconn
+      character(kind=c_char), intent(in) :: stmtname
+      type(c_ptr) :: pgresult
+        !! The functions [[pqnparams]] and [[pqparamtype]] can be applied to this *pgresult* to obtain
+        !! information about the parameters of the prepared statement,
+        !! and the functions [[pqnfields]], [[pqfname]], [[pqftype]], etc provide information about
+        !! the result columns (if any) of the statement.
+    end function pqdescribeprepared
 
-    ! ! PGresult *PQdescribePortal(PGconn *conn, const char *portalName);
-    ! ! STILL TO DO
+    ! PGresult *PQdescribePortal(PGconn *conn, const char *portalName);
+    function pqdescribeportal(pgconn, portalname) bind(c, name='PQdescribePortal') result(pgresult)
+      !! Submits a request to obtain information about the specified portal,
+      !! and waits for completion.
+      ! FIXME - don't use portals - not sure howto test.
+      import :: c_ptr, c_char
+      implicit none
+      type(c_ptr), intent(in), value :: pgconn
+      character(kind=c_char), intent(in) :: portalname
+      type(c_ptr) :: pgresult
+        !! The functions [[pqnparams]] and [[pqparamtype]] can be applied to this *pgresult* to obtain
+        !! information about the parameters of the prepared statement,
+        !! and the functions [[pqnfields]], [[pqfname]], [[pqftype]], etc provide information about
+        !! the result columns (if any) of the statement.
+    end function pqdescribeportal
 
     ! ExecStatusType PQresultStatus(const PGresult *res);
-    function resultstatus(pgresult) bind(c, name='PQresultStatus') result(r)
+    function pqresultstatus(pgresult) bind(c, name='PQresultStatus') result(r)
+      !! Returns the result status of the command.
       import :: c_ptr, c_int
       implicit none
       type(c_ptr), intent(in), value :: pgresult
       integer(kind=c_int) :: r
-    end function resultstatus
+    end function pqresultstatus
 
-    ! ! char *PQresStatus(ExecStatusType status);
-    ! function pqresstatus(status) bind(c, name='PQresStatus') result(r)
-    !   import :: c_ptr, c_int
-    !   implicit none
-    !   integer(kind=c_int), intent(in) :: status
-    !   type(c_ptr) :: r
-    ! end function pqresstatus
+    ! char *PQresStatus(ExecStatusType status);
+    function pqresstatus(status) bind(c, name='PQresStatus') result(r)
+      !! Converts the enumerated type returned by PQresultStatus into a string constant
+      !! describing the status code. The caller should not free the result.
+      import :: c_ptr, c_int
+      implicit none
+      integer(kind=c_int), intent(in), value :: status
+      type(c_ptr) :: r
+    end function pqresstatus
 
-    ! ! char *PQresultErrorMessage(const PGresult *res);
-    ! function pqresulterrormessage(pgresult) bind(c, name='PQresultErrorMessage') result(r)
-    !   import :: c_ptr
-    !   implicit none
-    !   type(c_ptr), intent(in), value :: pgresult
-    !   type(c_ptr) :: r
-    ! end function pqresulterrormessage
+    ! char *PQresultErrorMessage(const PGresult *res);
+    function pqresulterrormessage(pgresult) bind(c, name='PQresultErrorMessage') result(r)
+      !! Returns the error message associated with the command,
+      !! or an empty string if there was no error.
+      import :: c_ptr
+      implicit none
+      type(c_ptr), intent(in), value :: pgresult
+      type(c_ptr) :: ri
+        !! If there was an error, the returned string will include a trailing newline.
+        !! The caller should not free the result directly. It will be freed when the associated
+        !! *pgresult* handle is passed to [[pqclear]].
+    end function pqresulterrormessage
 
     ! ! char *PQresultVerboseErrorMessage(const PGresult *res,
     ! !                                   PGVerbosity verbosity,
     ! !                                   PGContextVisibility show_context);
     ! ! STILL TO DO
 
-    ! ! char *PQresultErrorField(const PGresult *res, int fieldcode);
-    ! function pqresulterrorfield(pgresult, fieldcode) bind(c, name='PQresultErrorField') result(r)
-    !   import :: c_ptr, c_int
-    !   implicit none
-    !   type(c_ptr), intent(in), value :: pgresult
-    !   integer(kind=c_int), intent(in) :: fieldcode
-    !   type(c_ptr) :: r
-    ! end function pqresulterrorfield
+    ! char *PQresultErrorField(const PGresult *res, int fieldcode);
+    function pqresulterrorfield(pgresult, fieldcode) bind(c, name='PQresultErrorField') result(r)
+      !! Returns an individual field of an error report.
+      import :: c_ptr, c_int
+      implicit none
+      type(c_ptr), intent(in), value :: pgresult
+      integer(kind=c_int), intent(in) :: fieldcode
+        !! fieldcode is an error field identifier.
+      type(c_ptr) :: r
+        !! NULL is returned if the *pgresult* is not an error or warning result,
+        !! or does not include the specified field.
+        !! Field values will normally not include a trailing newline.
+        !! The caller should not free the result directly.
+        !! It will be freed when the associated PGresult handle is passed to [[pqclear]].
+    end function pqresulterrorfield
 
-    ! ! void PQclear(PGresult *res);
-    ! subroutine pqclear(pgresult) bind(c, name='PQclear')
-    !   import :: c_ptr
-    !   implicit none
-    !   type(c_ptr), intent(in), value :: pgresult
-    ! end subroutine pqclear
+    ! void PQclear(PGresult *res);
+    subroutine pqclear(pgresult) bind(c, name='PQclear')
+      !! Frees the storage associated with a PGresult.
+      !! Every command result should be freed via [[clear]] when it is no longer needed.
+      import :: c_ptr
+      implicit none
+      type(c_ptr), intent(in), value :: pgresult
+    end subroutine pqclear
 
-    ! ! int PQntuples(const PGresult *res);
-    ! function pqntuples(pgresult) bind(c, name='PQntuples') result(r)
-    !   import :: c_ptr, c_int
-    !   implicit none
-    !   type(c_ptr), intent(in), value :: pgresult
-    !   integer(kind=c_int) :: r
-    ! end function pqntuples
+    ! int PQntuples(const PGresult *res);
+    function pqntuples(pgresult) bind(c, name='PQntuples') result(r)
+      !! Returns the number of rows (tuples) in the query result.
+      !! (Note that PGresult objects are limited to no more than INT_MAX rows,
+      !! so an int result is sufficient.)
+      import :: c_ptr, c_int
+      implicit none
+      type(c_ptr), intent(in), value :: pgresult
+      integer(kind=c_int) :: r
+    end function pqntuples
 
-    ! ! int PQnfields(const PGresult *res);
-    ! function pqnfields(pgresult) bind(c, name='PQnfields') result(r)
-    !   import :: c_ptr, c_int
-    !   implicit none
-    !   type(c_ptr), intent(in), value :: pgresult
-    !   integer(kind=c_int) :: r
-    ! end function pqnfields
+    ! int PQnfields(const PGresult *res);
+    function pqnfields(pgresult) bind(c, name='PQnfields') result(r)
+      !! Returns the number of columns (fields) in each row of the query result.
+      import :: c_ptr, c_int
+      implicit none
+      type(c_ptr), intent(in), value :: pgresult
+      integer(kind=c_int) :: r
+    end function pqnfields
 
-    ! ! char *PQfname(const PGresult *res, int column_number);
-    ! function pqfname(pgresult, column_number) bind(c, name='PQfname') result(r)
-    !   import :: c_ptr, c_int
-    !   implicit none
-    !   type(c_ptr), intent(in), value :: pgresult
-    !   integer(kind=c_int), intent(in) :: column_number
-    !   type(c_ptr) :: r
-    ! end function pqfname
+    ! char *PQfname(const PGresult *res, int column_number);
+    function pqfname(pgresult, column_number) bind(c, name='PQfname') result(r)
+      !! Returns the column name associated with the given column number.
+      !! Column numbers start at 0. The caller should not free the result directly.
+      !! It will be freed when the associated *pgresult* handle is passed to [[pqclear]].
+      import :: c_ptr, c_int
+      implicit none
+      type(c_ptr), intent(in), value :: pgresult
+      integer(kind=c_int), intent(in) :: column_number
+      type(c_ptr) :: r
+    end function pqfname
 
-    ! ! int PQfnumber(const PGresult *res, const char *column_name);
-    ! function pqfnumber(pgresult, column_name) bind(c, name='PQfnumber') result(r)
-    !   import :: c_ptr, c_char, c_int
-    !   implicit none
-    !   type(c_ptr), intent(in) :: pgresult
-    !   character(kind=c_char), intent(in) :: column_name
-    !   integer(kind=c_int) :: r
-    ! end function pqfnumber
+    ! int PQfnumber(const PGresult *res, const char *column_name);
+    function pqfnumber(pgresult, column_name) bind(c, name='PQfnumber') result(r)
+      import :: c_ptr, c_char, c_int
+      implicit none
+      type(c_ptr), intent(in) :: pgresult
+      character(kind=c_char), intent(in) :: column_name
+      integer(kind=c_int) :: r
+    end function pqfnumber
 
     ! ! Oid PQftable(const PGresult *res,
     ! !              int column_number);

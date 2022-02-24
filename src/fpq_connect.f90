@@ -44,17 +44,18 @@ module fpq_connect
   integer(kind=c_int), parameter, public :: PQPING_NO_ATTEMPT = 3
     !! Connection not attempted (bad params).
 
-  public :: ping
-  public :: pingparams
-  public :: connectdbparams
-  public :: connectdb
-  public :: setdblogin
-  public :: finish
-  public :: reset
+  public :: pqping
+  public :: pqpingparams
+  public :: pqconnectdbparams
+  public :: pqconnectdb
+  public :: pqsetdblogin
+  public :: pqfinish
+  public :: pqreset
+
   interface
 
     ! PGPing PQping(const char *conninfo);
-    function ping(conninfo) bind(c, name='PQping') result(r)
+    function pqping(conninfo) bind(c, name='PQping') result(r)
       !! Reports the status of the server.
       !! It is not necessary to supply correct user name, password,
       !! or database name values to obtain the server status;
@@ -65,12 +66,12 @@ module fpq_connect
       character(kind=c_char), intent(in) :: conninfo
         !! Connection string.
       integer(kind=c_int) :: r
-    end function ping
+    end function pqping
 
     ! PGPing PQpingParams(const char * const *keywords,
     !                     const char * const *values,
     !                     int expand_dbname);
-    function pingparams(keywords, values, expand_dbname) bind(c, name='PQpingParams') result(r)
+    function pqpingparams(keywords, values, expand_dbname) bind(c, name='PQpingParams') result(r)
       !! Reports the status of the server.
       import :: c_ptr, c_int
       implicit none
@@ -81,10 +82,10 @@ module fpq_connect
       integer(kind=c_int), intent(in) :: expand_dbname
         !! Flag (see documentation).
       integer(kind=c_int) :: r
-    end function pingparams
+    end function pqpingparams
 
     ! PGconn *PQconnectdbParams(const char * const *keywords, const char * const *values, int expand_dbname);
-    function connectdbparams(keywords, values, expand_dbname) bind(c, name='PQconnectdbParams') result(pgconn)
+    function pqconnectdbparams(keywords, values, expand_dbname) bind(c, name='PQconnectdbParams') result(pgconn)
       !! Makes a new connection to the database server.
       import :: c_ptr, c_int
       implicit none
@@ -96,10 +97,10 @@ module fpq_connect
         !! Flag (see documentation).
       type(c_ptr) :: pgconn
         !! Database connection pointer.
-    end function connectdbparams
+    end function pqconnectdbparams
 
     ! PGconn *PQconnectdb(const char *conninfo);
-    function connectdb(conninfo) bind(c, name='PQconnectdb') result(pgconn)
+    function pqconnectdb(conninfo) bind(c, name='PQconnectdb') result(pgconn)
       !! Makes a new connection to the database server.
       import :: c_char, c_ptr
       implicit none
@@ -107,7 +108,7 @@ module fpq_connect
         !! Connection string.
       type(c_ptr) :: pgconn
         !! Database connection pointer.
-    end function connectdb
+    end function pqconnectdb
 
     ! PGconn *PQsetdbLogin(const char *pghost,
     !                      const char *pgport,
@@ -116,32 +117,32 @@ module fpq_connect
     !                      const char *dbName,
     !                      const char *login,
     !                      const char *pwd);
-    function setdblogin(pghost, pgport, pgoptions, pgtty, dbname, login, pwd) bind(c, name='PQsetdbLogin') result(pgconn)
+    function pqsetdblogin(pghost, pgport, pgoptions, pgtty, dbname, login, pwd) bind(c, name='PQsetdbLogin') result(pgconn)
       !! Makes a new connection to the database server.
       import :: c_char, c_ptr
       implicit none
       character(kind=c_char), intent(in) :: pghost, pgport, pgoptions, pgtty, dbname, login, pwd
       type(c_ptr) :: pgconn
         !! Database connection pointer.
-    end function setdblogin
+    end function pqsetdblogin
 
     ! void PQfinish(PGconn *conn);
-    subroutine finish(pgconn) bind(c, name='PQfinish')
+    subroutine pqfinish(pgconn) bind(c, name='PQfinish')
       !! Closes the connection to the server.
       import :: c_ptr
       implicit none
       type(c_ptr), intent(in), value :: pgconn
         !! Database connection pointer.
-    end subroutine finish
+    end subroutine pqfinish
 
     ! void PQreset(PGconn *conn);
-    subroutine reset(pgconn) bind(c, name='PQreset')
+    subroutine pqreset(pgconn) bind(c, name='PQreset')
       !! Resets the communication channel to the server.
       import :: c_ptr
       implicit none
       type(c_ptr), intent(in), value :: pgconn
         !! Database connection pointer.
-    end subroutine reset
+    end subroutine pqreset
 
   end interface
 
