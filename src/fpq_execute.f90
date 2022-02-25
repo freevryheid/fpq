@@ -76,16 +76,20 @@ module fpq_execute
   public :: pqresstatus
   public :: pqresulterrormessage
   public :: pqresulterrorfield
-  public :: ntuples
-  public :: nfields
-  public :: fname
-  public :: fnumber
-  public :: ftablecol
-  public :: fformat
-  public :: fmod
-  public :: fsize
-  public :: binarytuples
-  public :: nparams
+  public :: pqntuples
+  public :: pqnfields
+  public :: pqfname
+  public :: pqfnumber
+  public :: pqftablecol
+  public :: pqfformat
+  ! public :: fmod
+  ! public :: fsize
+  public :: pqbinarytuples
+  public :: pqgetvalue
+  public :: pqgetisnull
+  public :: pqgetlength
+
+  ! public :: nparams
 
   interface
 
@@ -261,7 +265,7 @@ module fpq_execute
       import :: c_ptr
       implicit none
       type(c_ptr), intent(in), value :: pgresult
-      type(c_ptr) :: ri
+      type(c_ptr) :: r
         !! If there was an error, the returned string will include a trailing newline.
         !! The caller should not free the result directly. It will be freed when the associated
         !! *pgresult* handle is passed to [[pqclear]].
@@ -300,7 +304,7 @@ module fpq_execute
     ! int PQntuples(const PGresult *res);
     function pqntuples(pgresult) bind(c, name='PQntuples') result(r)
       !! Returns the number of rows (tuples) in the query result.
-      !! (Note that PGresult objects are limited to no more than INT_MAX rows,
+      !! (Note that *pgresult* objects are limited to no more than INT_MAX rows,
       !! so an int result is sufficient.)
       import :: c_ptr, c_int
       implicit none
@@ -325,88 +329,148 @@ module fpq_execute
       import :: c_ptr, c_int
       implicit none
       type(c_ptr), intent(in), value :: pgresult
-      integer(kind=c_int), intent(in) :: column_number
+      integer(kind=c_int), intent(in), value :: column_number
       type(c_ptr) :: r
     end function pqfname
 
     ! int PQfnumber(const PGresult *res, const char *column_name);
     function pqfnumber(pgresult, column_name) bind(c, name='PQfnumber') result(r)
+      !! Returns the column number associated with the given column name.
+      !! Column numbers start at 0.
+      !! -1 is returned if the given name does not match any column.
       import :: c_ptr, c_char, c_int
       implicit none
-      type(c_ptr), intent(in) :: pgresult
+      type(c_ptr), intent(in), value :: pgresult
       character(kind=c_char), intent(in) :: column_name
       integer(kind=c_int) :: r
     end function pqfnumber
 
-    ! ! Oid PQftable(const PGresult *res,
-    ! !              int column_number);
+    ! ! Oid PQftable(const PGresult *res, int column_number);
+    !! Returns the OID of the table from which the given column was fetched.
+    !! Column numbers start at 0.
     ! ! STILL TO DO
 
-    ! ! int PQftablecol(const PGresult *res, int column_number);
-    ! function pqftablecol(pgresult, column_number) bind(c, name='PQftablecol') result(r)
-    !   import :: c_ptr, c_int
-    !   implicit none
-    !   type(c_ptr), intent(in), value :: pgresult
-    !   integer(kind=c_int), intent(in) :: column_number
-    !   integer(kind=c_int) :: r
-    ! end function pqftablecol
+    ! int PQftablecol(const PGresult *res, int column_number);
+    function pqftablecol(pgresult, column_number) bind(c, name='PQftablecol') result(r)
+      !! Returns the column number (within its table) of the column making up the specified
+      !! query result column. Query-result column numbers start at 0, but table columns
+      !! have nonzero numbers.
+      import :: c_ptr, c_int
+      implicit none
+      type(c_ptr), intent(in), value :: pgresult
+      integer(kind=c_int), intent(in), value :: column_number
+      integer(kind=c_int) :: r
+        !! Zero is returned if the column number is out of range, or if the specified
+        !! column is not a simple reference to a table column.
+    end function pqftablecol
 
-    ! ! int PQfformat(const PGresult *res, int column_number);
-    ! function pqfformat(pgresult, column_number) bind(c, name='PQfformat') result(r)
-    !   import :: c_ptr, c_int
-    !   implicit none
-    !   type(c_ptr), intent(in), value :: pgresult
-    !   integer(kind=c_int), intent(in) :: column_number
-    !   integer(kind=c_int) :: r
-    ! end function pqfformat
+    ! int PQfformat(const PGresult *res, int column_number);
+    function pqfformat(pgresult, column_number) bind(c, name='PQfformat') result(r)
+      !! Returns the format code indicating the format of the given column.
+      !! Column numbers start at 0.
+      import :: c_ptr, c_int
+      implicit none
+      type(c_ptr), intent(in), value :: pgresult
+      integer(kind=c_int), intent(in), value :: column_number
+      integer(kind=c_int) :: r
+        !! Format code zero indicates textual data representation,
+        !! while format code one indicates binary representation.
+    end function pqfformat
 
-    ! ! Oid PQftype(const PGresult *res,
-    ! !         int column_number);
+    ! ! Oid PQftype(const PGresult *res, int column_number);
+    !   !! Returns the data type associated with the given column number. The integer returned is the internal OID number of the type.
+    !   !! Column numbers start at 0.
     ! ! STILL TO DO
 
     ! ! int PQfmod(const PGresult *res, int column_number);
     ! function pqfmod(pgresult, column_number) bind(c, name='PQfmod') result(r)
+    !   !! Returns the type modifier of the column associated with the given column number.
+    !   !! Column numbers start at 0.
     !   import :: c_ptr, c_int
     !   implicit none
     !   type(c_ptr), intent(in), value :: pgresult
     !   integer(kind=c_int), intent(in) :: column_number
     !   integer(kind=c_int) :: r
+    !     !! Most data types do not use modifiers, in which case the value is always -1.
     ! end function pqfmod
 
-    ! ! int PQfsize(const PGresult *res, int column_number);
-    ! function pqfsize(pgresult, column_number) bind(c, name='PQfsize') result(r)
-    !   import :: c_ptr, c_int
-    !   implicit none
-    !   type(c_ptr), intent(in), value :: pgresult
-    !   integer(kind=c_int), intent(in) :: column_number
-    !   integer(kind=c_int) :: r
-    ! end function pqfsize
+    ! int PQfsize(const PGresult *res, int column_number);
+    function pqfsize(pgresult, column_number) bind(c, name='PQfsize') result(r)
+      !! Returns the size in bytes of the column associated with the given column number.
+      !! Column numbers start at 0.
+      import :: c_ptr, c_int
+      implicit none
+      type(c_ptr), intent(in), value :: pgresult
+      integer(kind=c_int), intent(in) :: column_number
+      integer(kind=c_int) :: r
+        !! Returns the space allocated for this column in a database row,
+        !! in other words the size of the server's internal representation of the data type.
+        !! (Accordingly, it is not really very useful to clients.)
+        !! A negative value indicates the data type is variable-length.
+    end function pqfsize
 
-    ! ! int PQbinaryTuples(const PGresult *res);
-    ! function PQbinarytuples(pgresult) bind(c, name='PQbinaryTuples') result(r)
-    !   import :: c_ptr, c_int
-    !   implicit none
-    !   type(c_ptr), intent(in), value :: pgresult
-    !   integer(kind=c_int) :: r
-    ! end function PQbinarytuples
+    ! int PQbinaryTuples(const PGresult *res);
+    function pqbinarytuples(pgresult) bind(c, name='PQbinaryTuples') result(r)
+      !! Returns 1 if the *pgresult* contains binary data and 0 if it contains text data.
+      import :: c_ptr, c_int
+      implicit none
+      type(c_ptr), intent(in), value :: pgresult
+      integer(kind=c_int) :: r
+    end function PQbinarytuples
 
-    ! ! char *PQgetvalue(const PGresult *res,
-    ! !                  int row_number,
-    ! !                  int column_number);
-    ! ! STILL TO DO
+    ! char *PQgetvalue(const PGresult *res, int row_number, int column_number);
+    function pqgetvalue(pgresult, row_number, column_number) bind(c, name='PQgetvalue') result(r)
+      !! Returns a single field value of one row of a PGresult.
+      !! Row and column numbers start at 0. The caller should not free the result directly.
+      !! It will be freed when the associated *pgresult* handle is passed to [[pqclear]].
+      import :: c_ptr, c_int
+      implicit none
+      type(c_ptr), intent(in), value :: pgresult
+      integer(kind=c_int), intent(in), value :: column_number, row_number
+      type(c_ptr) :: r
+        !! For data in text format, the value returned by PQgetvalue is a null-terminated
+        !! character string representation of the field value. For data in binary format,
+        !! the value is in the binary representation determined by the data type's typsend
+        !! and typreceive functions. (The value is actually followed by a zero byte in this
+        !! case too, but that is not ordinarily useful, since the value is likely to contain
+        !! embedded nulls.)
+        !! An empty string is returned if the field value is null.
+        !! See [[pqgetisnull]] to distinguish null values from empty-string values.
+    end function pqgetvalue
 
-    ! ! int PQgetisnull(const PGresult *res,
-    ! !                 int row_number,
-    ! !                 int column_number);
-    ! ! STILL TO DO
+    ! int PQgetisnull(const PGresult *res, int row_number, int column_number);
+    function pqgetisnull(pgresult, row_number, column_number) bind(c, name='PQgetisnull') result(r)
+      !! Tests a field for a null value. Row and column numbers start at 0.
+      import :: c_ptr, c_int
+      implicit none
+      type(c_ptr), intent(in), value :: pgresult
+      integer(kind=c_int), intent(in), value :: column_number, row_number
+      integer(kind=c_int) :: r
+        !! This function returns 1 if the field is null and 0 if it contains a non-null value.
+        !! (Note that [[pqgetvalue]] will return an empty string, not a null pointer, for a null field.)
+    end function pqgetisnull
 
-    ! ! int PQgetlength(const PGresult *res,
-    ! !                 int row_number,
-    ! !                 int column_number);
-    ! ! STILL TO DO
+    ! int PQgetlength(const PGresult *res, int row_number, int column_number);
+    function pqgetlength(pgresult, row_number, column_number) bind(c, name='PQgetlength') result(r)
+      !! Returns the actual length of a field value in bytes. Row and column numbers start at 0.
+      import :: c_ptr, c_int
+      implicit none
+      type(c_ptr), intent(in), value :: pgresult
+      integer(kind=c_int), intent(in), value :: column_number, row_number
+      integer(kind=c_int) :: r
+        !! This is the actual data length for the particular data value, that is,
+        !! the size of the object pointed to by [[pqgetvalue]].
+        !! For text data format this is the same as strlen().
+        !! For binary format this is essential information.
+        !! Note that one should not rely on [[pqfsize]] to obtain the actual data length.
+    end function pqgetlength
+
+
+    ! STILL TO DO
 
     ! ! int PQnparams(const PGresult *res);
     ! function PQnparams(pgresult) bind(c, name='PQnparams') result(r)
+    !   !! Returns the number of parameters of a prepared statement.
     !   import :: c_ptr, c_int
     !   implicit none
     !   type(c_ptr), intent(in), value :: pgresult
@@ -414,11 +478,13 @@ module fpq_execute
     ! end function PQnparams
 
     ! ! Oid PQparamtype(const PGresult *res, int param_number);
+    !   !! Returns the data type of the indicated statement parameter. Parameter numbers start at 0.
     ! ! STILL TO DO
 
     ! ! void PQprint(FILE *fout,      /* output stream */
     ! !              const PGresult *res,
     ! !              const PQprintOpt *po);
+    !    !! Prints out all the rows and, optionally, the column names to the specified output stream.
     ! ! typedef struct
     ! ! {
     ! !     pqbool  header;      /* print output field headings and row count */
@@ -435,15 +501,19 @@ module fpq_execute
     ! ! STILL TO DO
 
     ! ! char *PQcmdStatus(PGresult *res);
+    !   !! Returns the command status tag from the SQL command that generated the PGresult.
     ! ! STILL TO DO
 
-    ! ! char *PQcmdTuples(PGresult *res);
+    ! ! char *PQcmdTuples(PGresult *res);i
+    !   !! Returns the number of rows affected by the SQL command.
     ! ! STILL TO DO
 
     ! ! Oid PQoidValue(const PGresult *res);
+    !   !! Returns the OID of the inserted row
     ! ! STILL TO DO
 
     ! ! char *PQoidStatus(const PGresult *res);
+    !   !! This function is deprecated
     ! ! STILL TO DO
 
     ! ! char *PQescapeLiteral(PGconn *conn, const char *str, size_t length);
@@ -475,232 +545,6 @@ module fpq_execute
     ! ! STILL TO DO
 
   end interface
-
-  ! contains
-
-    ! function exec(conn, command) result(r)
-    !   !! Submits a command to the server and waits for the result.
-    !   type(c_ptr), intent(in) :: conn
-    !     !! Database connection pointer.
-    !   character(len=*), intent(in) :: command
-    !     !! The command string can include multiple SQL commands (separated by semicolons).
-    !     !! Multiple queries sent in a single PQexec call are processed in a single transaction,
-    !     !! unless there are explicit BEGIN/COMMIT commands included in the query string to divide
-    !     !! it into multiple transactions. (See Section 53.2.2.1 for more details about how the
-    !     !! server handles multi-query strings.)
-    !   type(c_ptr) :: r
-    !     !! Note however that the returned PGresult structure describes only the result of the last
-    !     !! command executed from the string. Should one of the commands fail, processing of the
-    !     !! string stops with it and the returned PGresult describes the error condition.
-    !   r = pqexec(conn, cstr(command))
-    ! end function exec
-
-  !   function describeprepared(conn, stmtname) result(r)
-  !     !! Submits a request to obtain information about the specified prepared statement,
-  !     !! and waits for completion.
-  !     type(c_ptr), intent(in) :: conn
-  !       !! Database connection pointer.
-  !     character(len=*), intent(in) :: stmtname
-  !       !! stmtName can be "" or NULL to reference the unnamed statement,
-  !       !! otherwise it must be the name of an existing prepared statement.
-  !     type(c_ptr) :: r
-  !       !! On success, a PGresult with status PGRES_COMMAND_OK is returned.
-  !       !! The functions PQnparams and PQparamtype can be applied to this PGresult
-  !       !! to obtain information about the parameters of the prepared statement,
-  !       !! and the functions PQnfields, PQfname, PQftype, etc provide information
-  !       !! about the result columns (if any) of the statement.
-  !     r = pqdescribeprepared(conn, cstr(stmtname))
-  !   end function describeprepared
-
-  !   function resultstatus(pgresult) result(r)
-  !     !! Returns the result status of the command.
-  !     type(c_ptr), intent(in) :: pgresult
-  !       !! PGresult pointer.
-  !     integer(kind=c_int) :: r
-  !       !! PQresultStatus can return one of the following values:[TODO]
-  !     r = pqresultstatus(pgresult)
-  !   end function resultstatus
-
-  !   function resstatus(status) result(r)
-  !     !! Converts the enumerated type returned by PQresultStatus into a string constant describing the status code.
-  !     !! The caller should not free the result.
-  !     integer(kind=c_int), intent(in) :: status
-  !       !! Integer returned by resultstatus.
-  !     character(len=:), allocatable :: r
-  !       !! String constant describing the submitted code.
-  !     type(c_ptr) :: ptr
-  !     ptr = pqresstatus(status)
-  !     if (c_associated(ptr)) then
-  !       call c_f_str_ptr(ptr, r)
-  !     end if
-  !   end function resstatus
-
-  !   function resulterrormessage(pgresult) result(r)
-  !     !! Returns the error message associated with the command, or an empty string if there was no error.
-  !     type(c_ptr), intent(in) :: pgresult
-  !       !! PGresult pointer.
-  !     character(len=:), allocatable :: r
-  !       !! If there was an error, the returned string will include a trailing newline. i
-  !       !! The caller should not free the result directly. It will be freed when the associated PGresult handle is passed to PQclear.
-  !       !! Immediately following a PQexec or PQgetResult call, PQerrorMessage (on the connection) will return the same string as
-  !       !! PQresultErrorMessage (on the result). However, a PGresult will retain its error message until destroyed, whereas the
-  !       !! connection's error message will change when subsequent operations are done. Use PQresultErrorMessage when you want to
-  !       !! know the status associated with a particular PGresult; use PQerrorMessage when you want to know the status from
-  !       !! the latest operation on the connection.
-  !     type(c_ptr) :: ptr
-  !     ptr = pqresulterrormessage(pgresult)
-  !     if (c_associated(ptr)) then
-  !       call c_f_str_ptr(ptr, r)
-  !     end if
-  !   end function resulterrormessage
-
-  !   function resulterrorfield(pgresult, fieldcode) result(r)
-  !     !! Returns an individual field of an error report.
-  !     type(c_ptr), intent(in) :: pgresult
-  !       !! PGresult pointer.
-  !     integer(kind=c_int) :: fieldcode
-  !       !! An error field identifier; see the symbols listed below.[todo]
-  !     character(len=:), allocatable :: r
-  !       !! NULL is returned if the PGresult is not an error or warning result, or does not include the specified field.
-  !       !! Field values will normally not include a trailing newline. The caller should not free the result directly.
-  !       !! It will be freed when the associated PGresult handle is passed to PQclear.
-  !     type(c_ptr) :: ptr
-  !     ptr = pqresulterrorfield(pgresult, fieldcode)
-  !     if (c_associated(ptr)) then
-  !       call c_f_str_ptr(ptr, r)
-  !     end if
-  !   end function resulterrorfield
-
-  !   subroutine clear(pgresult)
-  !     !! Frees the storage associated with a PGresult.
-  !     !! Every command result should be freed via PQclear when it is no longer needed.
-  !     !! You can keep a PGresult object around for as long as you need it; it does not go away when you issue a new command,
-  !     !! nor even if you close the connection. To get rid of it, you must call PQclear. Failure to do this will result in
-  !     !! memory leaks in your application.
-  !     type(c_ptr), intent(in) :: pgresult
-  !     call pqclear(pgresult)
-  !   end subroutine clear
-
-  !   function ntuples(pgresult) result(r)
-  !     !! Returns the number of rows (tuples) in the query result. (Note that PGresult objects are limited to no more
-  !     !! than INT_MAX rows, so an int result is sufficient.)
-  !     type(c_ptr), intent(in) :: pgresult
-  !       !! PGresult pointer.
-  !     integer(kind=c_int) :: r
-  !       !! Number of rows (tuples) in the query result.
-  !     r = pqntuples(pgresult)
-  !   end function ntuples
-
-  !   function nfields(pgresult) result(r)
-  !     !! Returns the number of columns (fields) in each row of the query result.
-  !     type(c_ptr), intent(in) :: pgresult
-  !       !! PGresult pointer.
-  !     integer(kind=c_int) :: r
-  !       !! Number of fields.
-  !     r = pqnfields(pgresult)
-  !   end function nfields
-
-  !   function fname(pgresult, column_number) result(r)
-  !     !! Returns the column name associated with the given column number.
-  !     !! The caller should not free the result directly.
-  !     !! It will be freed when the associated PGresult handle is passed to PQclear.
-  !     type(c_ptr), intent(in) :: pgresult
-  !       !! PGresult pointer.
-  !     integer(kind=c_int) :: column_number
-  !       !! P!! Column numbers start at 0.
-  !     character(len=:), allocatable :: r
-  !       !! NULL is returned if the PGresult is not an error or warning result, or does not include the specified field.
-  !       !! Field values will normally not include a trailing newline. The caller should not free the result directly.
-  !       !! It will be freed when the associated PGresult handle is passed to PQclear.
-  !     type(c_ptr) :: ptr
-  !     ptr = pqfname(pgresult, column_number)
-  !     if (c_associated(ptr)) then
-  !       call c_f_str_ptr(ptr, r)
-  !     end if
-  !   end function fname
-
-  !   function fnumber(pgresult, column_name) result(r)
-  !     !! Returns the column number associated with the given column name.
-  !     type(c_ptr), intent(in) :: pgresult
-  !       !! PGresult pointer.
-  !     character(len=*), intent(in) :: column_name
-  !       !! The given name is treated like an identifier in an SQL command, that is, it is downcased unless double-quoted.
-  !     integer(kind=c_int) :: r
-  !       !! -1 is returned if the given name does not match any column.
-  !     r = pqfnumber(pgresult, cstr(column_name))
-  !   end function fnumber
-
-  !   function ftablecol(pgresult, column_number) result(r)
-  !     !! Returns the column number (within its table) of the column making up the specified query result column.
-  !     type(c_ptr), intent(in), value :: pgresult
-  !       !! PGresult pointer.
-  !     integer(kind=c_int), intent(in) :: column_number
-  !       !! Query-result column numbers start at 0, but table columns have nonzero numbers.
-  !     integer(kind=c_int) :: r
-  !       !! Zero is returned if the column number is out of range, or if the specified column is not a simple reference to a table column.
-  !     r = pqftablecol(pgresult, column_number)
-  !   end function ftablecol
-
-  !   function fformat(pgresult, column_number) result(r)
-  !     !! Returns the format code indicating the format of the given column.
-  !     type(c_ptr), intent(in), value :: pgresult
-  !       !! PGresult pointer.
-  !     integer(kind=c_int), intent(in) :: column_number
-  !       !! Query-result column numbers start at 0, but table columns have nonzero numbers.
-  !     integer(kind=c_int) :: r
-  !       !! Format code zero indicates textual data representation, while format code one indicates binary representation.
-  !     r = pqfformat(pgresult, column_number)
-  !   end function fformat
-
-  !   function fmod(pgresult, column_number) result(r)
-  !     !! Returns the type modifier of the column associated with the given column number.
-  !     type(c_ptr), intent(in), value :: pgresult
-  !       !! PGresult pointer.
-  !     integer(kind=c_int), intent(in) :: column_number
-  !       !! Query-result column numbers start at 0, but table columns have nonzero numbers.
-  !     integer(kind=c_int) :: r
-  !       !! The interpretation of modifier values is type-specific; they typically indicate precision or size limits.
-  !       !! The value -1 is used to indicate no information available.
-  !       !! Most data types do not use modifiers, in which case the value is always -1.
-  !     r = pqfmod(pgresult, column_number)
-  !   end function fmod
-
-  !   function fsize(pgresult, column_number) result(r)
-  !     !! Returns the size in bytes of the column associated with the given column number.
-  !     type(c_ptr), intent(in), value :: pgresult
-  !       !! PGresult pointer.
-  !     integer(kind=c_int), intent(in) :: column_number
-  !       !! Query-result column numbers start at 0, but table columns have nonzero numbers.
-  !     integer(kind=c_int) :: r
-  !       !! Returns the space allocated for this column in a database row, in other words
-  !       !! the size of the server's internal representation of the data type.
-  !       !! (Accordingly, it is not really very useful to clients.)
-  !       !! A negative value indicates the data type is variable-length.
-  !     r = pqfsize(pgresult, column_number)
-  !   end function fsize
-
-  !   function binarytuples(pgresult) result(r)
-  !     !! Returns 1 if the PGresult contains binary data and 0 if it contains text data.
-  !     type(c_ptr), intent(in), value :: pgresult
-  !       !! PGresult pointer.
-  !     integer(kind=c_int) :: r
-  !       !! This function is deprecated (except for its use in connection with COPY),
-  !       !! because it is possible for a single PGresult to contain text data in some columns
-  !       !! and binary data in others. PQfformat is preferred.
-  !       !! PQbinaryTuples returns 1 only if all columns of the result are binary (format 1).
-  !     r = pqbinarytuples(pgresult)
-  !   end function binarytuples
-
-  !   function nparams(pgresult) result(r)
-  !     !! Returns the number of parameters of a prepared statement.
-  !     type(c_ptr), intent(in), value :: pgresult
-  !       !! PGresult pointer.
-  !     integer(kind=c_int) :: r
-  !       !! This function is only useful when inspecting the result of PQdescribePrepared.
-  !       !! For other types of queries it will return zero.
-  !     r = pqnparams(pgresult)
-  !   end function nparams
-
 
 end module fpq_execute
 
