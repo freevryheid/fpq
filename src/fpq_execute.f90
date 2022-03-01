@@ -227,7 +227,7 @@ module fpq_execute
     function pqdescribeportal(pgconn, portalname) bind(c, name='PQdescribePortal') result(pgresult)
       !! Submits a request to obtain information about the specified portal,
       !! and waits for completion.
-      ! FIXME - don't use portals - not sure howto test.
+      ! FIXME - i've never used portals - not sure howto test.
       import :: c_ptr, c_char
       implicit none
       type(c_ptr), intent(in), value :: pgconn
