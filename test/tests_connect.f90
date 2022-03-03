@@ -11,7 +11,8 @@ module tests_connect
     subroutine collect_tests_connect(testsuite)
       type(unittest_type), allocatable, intent(out) :: testsuite(:)
       testsuite = [                                                          &
-          new_unittest("test for pqping", test_pqping)                       &
+          ! new_unittest("test for pqping", test_pqping)                       &
+          new_unittest("test for ping", test_ping)                           &
         , new_unittest("test for pqpingparams", test_pqpingparams)           &
         , new_unittest("test for pqconnectdbparams", test_pqconnectdbparams) &
         , new_unittest("test for pqconnectdb", test_pqconnectdb)             &
@@ -19,12 +20,19 @@ module tests_connect
       ]
     end subroutine collect_tests_connect
 
-    subroutine test_pqping(error)
+    ! subroutine test_pqping(error)
+    !   ! Ping the postgresql server.
+    !   type(error_type), allocatable, intent(out) :: error
+    !   call check(error, pqping(c_str("dbname=smgr")), PQPING_OK)
+    !   if (allocated(error)) return
+    ! end subroutine test_pqping
+
+    subroutine test_ping(error)
       ! Ping the postgresql server.
       type(error_type), allocatable, intent(out) :: error
-      call check(error, pqping(c_str("dbname=smgr")), PQPING_OK)
+      call check(error, ping("dbname=smgr"), PQPING_OK)
       if (allocated(error)) return
-    end subroutine test_pqping
+    end subroutine test_ping
 
     subroutine test_pqpingparams(error)
       ! keys and vals are string arrays

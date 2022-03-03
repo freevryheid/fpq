@@ -10,7 +10,7 @@ program tester
   integer :: stat
   character(len=:), allocatable :: test
 
-  test = "4"
+  test = "1"
 
   if (scan(test, "1") > 0) then
     stat = 0

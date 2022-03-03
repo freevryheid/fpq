@@ -1,4 +1,4 @@
-module async
+module fpq_async
 
   use, intrinsic :: iso_c_binding
   use fpq_common
@@ -24,7 +24,7 @@ module async
     ! int PQsendQuery(PGconn *conn, const char *command);
     function pqsendquery(pgconn, command) bind(c, name='PQsendQuery') result(r)
       !! Submits a command to the server without waiting for the result(s).
-      import :: c_ptr, c_charm c_int
+      import :: c_ptr, c_char, c_int
       implicit none
       type(c_ptr), intent(in), value :: pgconn
       character(kind=c_char), intent(in) :: command
@@ -200,7 +200,7 @@ module async
       type(c_ptr), intent(in), value :: pgconn
       integer(kind=c_int), intent(in), value :: arg
       integer(kind=c_int) :: r
-    end function pqisbusy
+    end function pqsetnonblocking
 
     ! int PQisnonblocking(const PGconn *conn);
     function pqisnonblocking(pgconn) bind(c, name='PQisnonblocking') result(r)
@@ -235,5 +235,5 @@ module async
 
   end interface
 
-end module async
+end module fpq_async
 

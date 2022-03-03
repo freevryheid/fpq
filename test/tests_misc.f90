@@ -19,8 +19,8 @@ module tests_misc
 
     subroutine test_pqlibversion(error)
       type(error_type), allocatable, intent(out) :: error
-      call check(error, pqlibversion(), 1)
+      call check(error, pqlibversion(), 130006_c_int)
       if (allocated(error)) return
     end subroutine test_pqlibversion
 
-end module tests_connect
+end module tests_misc

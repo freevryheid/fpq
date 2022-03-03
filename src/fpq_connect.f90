@@ -7,64 +7,61 @@ module fpq_connect
   private
 
   ! Connection parameters
-  integer(kind=c_int), parameter, public :: CONNECTION_OK = 0
+  integer, parameter, public :: CONNECTION_OK = 0
     !! Connection success.
-  integer(kind=c_int), parameter, public :: CONNECTION_BAD = 1
+  integer, parameter, public :: CONNECTION_BAD = 1
     !! Connection failed, typically because of invalid connection parameters.
-  integer(kind=c_int), parameter, public :: CONNECTION_STARTED = 2
+  integer, parameter, public :: CONNECTION_STARTED = 2
     !!  Waiting for connection to be made. Non-blocking from here on.
-  integer(kind=c_int), parameter, public :: CONNECTION_MADE = 3
+  integer, parameter, public :: CONNECTION_MADE = 3
     !!  Connection OK; waiting to send.
-  integer(kind=c_int), parameter, public :: CONNECTION_AWAITING_RESPONSE = 4
+  integer, parameter, public :: CONNECTION_AWAITING_RESPONSE = 4
     !!  Waiting for a response from the postmaster.
-  integer(kind=c_int), parameter, public :: CONNECTION_AUTH_OK = 5
+  integer, parameter, public :: CONNECTION_AUTH_OK = 5
   !!  Received authentication; waiting for backend startup.
-  integer(kind=c_int), parameter, public :: CONNECTION_SETENV = 6
+  integer, parameter, public :: CONNECTION_SETENV = 6
     !!  Negotiating environment.
-  integer(kind=c_int), parameter, public :: CONNECTION_SSL_STARTUP = 7
+  integer, parameter, public :: CONNECTION_SSL_STARTUP = 7
     !!  Negotiating SSL.
-  integer(kind=c_int), parameter, public :: CONNECTION_NEEDED = 8
+  integer, parameter, public :: CONNECTION_NEEDED = 8
     !!  Internal state: connect() needed.
-  integer(kind=c_int), parameter, public :: CONNECTION_CHECK_WRITABLE = 9
+  integer, parameter, public :: CONNECTION_CHECK_WRITABLE = 9
     !!  Check if we could make a writable connection.
-  integer(kind=c_int), parameter, public :: CONNECTION_CONSUME = 10
+  integer, parameter, public :: CONNECTION_CONSUME = 10
     !!  Wait for any pending message and consume them.
-  integer(kind=c_int), parameter, public :: CONNECTION_GSS_STARTUP = 11
+  integer, parameter, public :: CONNECTION_GSS_STARTUP = 11
     !!  Negotiating GSSAPI.
-  integer(kind=c_int), parameter, public :: CONNECTION_CHECK_TARGET = 12
+  integer, parameter, public :: CONNECTION_CHECK_TARGET = 12
     !!  Check if we have a proper target connection.
 
   ! Ping parameters
-  integer(kind=c_int), parameter, public :: PQPING_OK = 0
+  integer, parameter, public :: PQPING_OK = 0
     !! Server is accepting connections.
-  integer(kind=c_int), parameter, public :: PQPING_REJECT = 1
+  integer, parameter, public :: PQPING_REJECT = 1
     !! Server is alive but rejecting connections.
-  integer(kind=c_int), parameter, public :: PQPING_NO_RESPONSE = 2
+  integer, parameter, public :: PQPING_NO_RESPONSE = 2
     !! Could not establish connection.
-  integer(kind=c_int), parameter, public :: PQPING_NO_ATTEMPT = 3
+  integer, parameter, public :: PQPING_NO_ATTEMPT = 3
     !! Connection not attempted (bad params).
 
-  public :: pqping
+  ! low-level
+  ! public :: pqping
   public :: pqpingparams
   public :: pqconnectdbparams
   public :: pqconnectdb
   public :: pqsetdblogin
   public :: pqfinish
   public :: pqreset
+  ! high-level
+  public :: ping
 
   interface
 
     ! PGPing PQping(const char *conninfo);
     function pqping(conninfo) bind(c, name='PQping') result(r)
-      !! Reports the status of the server.
-      !! It is not necessary to supply correct user name, password,
-      !! or database name values to obtain the server status;
-      !! however, if incorrect values are provided,
-      !! the server will log a failed connection attempt.
       import :: c_char, c_int
       implicit none
       character(kind=c_char), intent(in) :: conninfo
-        !! Connection string.
       integer(kind=c_int) :: r
     end function pqping
 
@@ -145,5 +142,19 @@ module fpq_connect
     end subroutine pqreset
 
   end interface
+
+  contains
+
+    function ping(conninfo) result(r)
+      !! Reports the status of the server.
+      !! It is not necessary to supply correct user name, password,
+      !! or database name values to obtain the server status;
+      !! however, if incorrect values are provided,
+      !! the server will log a failed connection attempt.
+      character(*), intent(in) :: conninfo
+        !! Connection string.
+      integer :: r
+      r = int(pqping(c_str(conninfo)))
+    end function ping
 
 end module fpq_connect

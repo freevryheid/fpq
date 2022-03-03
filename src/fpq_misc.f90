@@ -5,7 +5,7 @@ module fpq_misc
   implicit none
   private
 
-  public ::
+  public :: pqlibversion
 
   interface
 
