@@ -6,7 +6,18 @@ module async
   private
 
   public :: pqsendquery
-
+  public :: pqsendqueryparams
+  public :: pqsendprepare
+  public :: pqsendqueryprepared
+  public :: pqsenddescribeprepared
+  public :: pqsenddescribeportal
+  public :: pqgetresult
+  public :: pqconsumeinput
+  public :: pqisbusy
+  public :: pqsetnonblocking
+  public :: pqisnonblocking
+  public :: pqflush
+  public :: pqsetsinglerowmode
 
   interface
 
@@ -211,6 +222,16 @@ module async
       type(c_ptr), intent(in), value :: pgconn
       integer(kind=c_int) :: r
     end function pqflush
+
+    ! int PQsetSingleRowMode(PGconn *conn);
+    function pqsetsinglerowmode(pgconn, arg) bind(c, name='PQsetSingleRowMode') result(r)
+      !! Select single-row mode for the currently-executing query.
+      import :: c_ptr, c_int
+      implicit none
+      type(c_ptr), intent(in), value :: pgconn
+      integer(kind=c_int), intent(in), value :: arg
+      integer(kind=c_int) :: r
+    end function pqsetsinglerowmode
 
   end interface
 
