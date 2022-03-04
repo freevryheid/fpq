@@ -1,7 +1,14 @@
 module fpq_common
+
   use, intrinsic :: iso_c_binding
   implicit none
   private
+
+  type pq
+    type(c_ptr) :: ptr
+  end type pq
+
+  public :: pq
   public :: c_str
   public :: c_f_str_ptr
 

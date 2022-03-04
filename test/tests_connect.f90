@@ -10,77 +10,64 @@ module tests_connect
 
     subroutine collect_tests_connect(testsuite)
       type(unittest_type), allocatable, intent(out) :: testsuite(:)
-      testsuite = [                                                          &
-          ! new_unittest("test for pqping", test_pqping)                       &
-          new_unittest("test for ping", test_ping)                           &
-        , new_unittest("test for pqpingparams", test_pqpingparams)           &
-        , new_unittest("test for pqconnectdbparams", test_pqconnectdbparams) &
-        , new_unittest("test for pqconnectdb", test_pqconnectdb)             &
-        , new_unittest("test for pqsetdblogin", test_pqsetdblogin)           &
+      testsuite = [                                                      &
+          new_unittest("test for ping", test_ping)                       &
+        , new_unittest("test for pingparams", test_pingparams)           &
+        , new_unittest("test for connectdbparams", test_connectdbparams) &
+        , new_unittest("test for connectdb", test_connectdb)             &
+        , new_unittest("test for setdblogin", test_setdblogin)           &
       ]
     end subroutine collect_tests_connect
 
-    ! subroutine test_pqping(error)
-    !   ! Ping the postgresql server.
-    !   type(error_type), allocatable, intent(out) :: error
-    !   call check(error, pqping(c_str("dbname=smgr")), PQPING_OK)
-    !   if (allocated(error)) return
-    ! end subroutine test_pqping
-
     subroutine test_ping(error)
-      ! Ping the postgresql server.
+      ! Ping the postgresql server
       type(error_type), allocatable, intent(out) :: error
       call check(error, ping("dbname=smgr"), PQPING_OK)
       if (allocated(error)) return
     end subroutine test_ping
 
-    subroutine test_pqpingparams(error)
+    subroutine test_pingparams(error)
       ! keys and vals are string arrays
       type(error_type), allocatable, intent(out) :: error
-      character(len=10), dimension(2), target :: keys, vals
-      ! not sure howto define arrays have varying string lengths
-      ! shouldn't be an issue as c uses null char to delineate strings,
-      ! which we'll provide:
-      keys = [character(len=10) :: c_str("user"), c_str("dbname")]
-      vals = [character(len=10) :: c_str("grassy"), c_str("smgr")]
-      call check(error, pqpingparams(c_loc(keys), c_loc(vals), 0_c_int), PQPING_OK)
+      character(len=10), dimension(2) :: keys, vals
+      ! length required for string arrays
+      keys = [character(len=10) :: "user", "dbname"]
+      vals = [character(len=10) :: "grassy", "smgr"]
+      call check(error, pingparams(keys, vals, 0), PQPING_OK)
       if (allocated(error)) return
-    end subroutine test_pqpingparams
+    end subroutine test_pingparams
 
-    subroutine test_pqconnectdbparams(error)
+    subroutine test_connectdbparams(error)
       ! keys and vals are string arrays
       type(error_type), allocatable, intent(out) :: error
-      character(len=10), dimension(2), target :: keys, vals
-      type(c_ptr) :: pgconn
-      ! not sure howto define arrays have varying string lengths
-      ! shouldn't be an issue as c uses null char to delineate strings,
-      ! which we'll provide:
+      character(len=10), dimension(2) :: keys, vals
+      type(pq) :: conn
       keys = [character(len=10) :: c_str("user"), c_str("dbname")]
       vals = [character(len=10) :: c_str("grassy"), c_str("smgr")]
-      pgconn = pqconnectdbparams(c_loc(keys), c_loc(vals), 0_c_int)
-      call check(error, pqstatus(pgconn), CONNECTION_OK)
-      call pqfinish(pgconn)
+      conn = connectdbparams(keys, vals, 0)
+      call check(error, status(conn), CONNECTION_OK)
+      call finish(conn)
       if (allocated(error)) return
-    end subroutine test_pqconnectdbparams
+    end subroutine test_connectdbparams
 
-    subroutine test_pqconnectdb(error)
+    subroutine test_connectdb(error)
       ! simple connect
       type(error_type), allocatable, intent(out) :: error
-      type(c_ptr) :: pgconn
-      pgconn = pqconnectdb(c_str(""))
-      call check(error, pqstatus(pgconn), CONNECTION_OK)
-      call pqfinish(pgconn)
+      type(pq) :: conn
+      conn = connectdb()
+      call check(error, status(conn), CONNECTION_OK)
+      call finish(conn)
       if (allocated(error)) return
-    end subroutine test_pqconnectdb
+    end subroutine test_connectdb
 
-    subroutine test_pqsetdblogin(error)
+    subroutine test_setdblogin(error)
       ! yet another connect
       type(error_type), allocatable, intent(out) :: error
-      type(c_ptr) :: pgconn
-      pgconn = pqsetdblogin(c_str(""), c_str("") , c_str(""), c_str(""), c_str(""), c_str(""), c_str(""))
-      call check(error, pqstatus(pgconn), CONNECTION_OK)
-      call pqfinish(pgconn)
+      type(pq) :: conn
+      conn = setdblogin("", "", "", "", "", "", "")
+      call check(error, status(conn), CONNECTION_OK)
+      call finish(conn)
       if (allocated(error)) return
-    end subroutine test_pqsetdblogin
+    end subroutine test_setdblogin
 
 end module tests_connect
