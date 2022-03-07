@@ -1,6 +1,6 @@
 module tests_status
 
-  use, intrinsic :: iso_c_binding
+  ! use, intrinsic :: iso_c_binding
   use fpq
   use testdrive, only: error_type, unittest_type, new_unittest, check, skip_test
   implicit none
